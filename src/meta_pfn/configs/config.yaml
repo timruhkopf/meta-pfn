@@ -1,0 +1,25 @@
+# Root config. Experiments (configs/experiment/<name>.yaml) select a task and override.
+defaults:
+  - task: ???
+  - runtime: default
+  - paths: default
+  - experiment: null
+  - _self_
+
+seed: 0
+stage: scratch            # set by `just run` / `just sweep`; read by the test-split guard
+experiment_name: ${or_scratch:${hydra:runtime.choices.experiment}}
+
+tracking:                 # bookkeeping, set by the sweep machinery; never a semantic param
+  sweep_dir: null
+  member: null
+  replicate_keys: [seed]  # excluded from config_hash: replicates of one configuration
+
+hydra:
+  run:
+    dir: ${paths.runs}/_scratch/${experiment_name}/${now:%Y%m%d-%H%M%S}
+  sweep:
+    dir: ${paths.runs}/_scratch/${experiment_name}/multirun_${now:%Y%m%d-%H%M%S}
+    subdir: ${hydra.job.num}
+  job:
+    chdir: false

@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - uses: extractions/setup-just@v2
+      - run: uv sync --extra cpu --group notebooks --frozen
+      - run: echo "META_PFN_TORCH_EXTRA=cpu" >> .env
+      - run: just lint
+      - run: just test-all
+        env:
+          HYPOTHESIS_PROFILE: ci
+      - run: just smoke
+      - run: just notebooks-check
+      - run: just refs-check

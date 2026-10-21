@@ -1,0 +1,5 @@
+# Machine-specific roots come from .env; defaults are inside the repo.
+root: ${repo_root:}
+runs: ${oc.env:META_PFN_RUNS_ROOT,${repo_root:}/runs}
+data: ${oc.env:META_PFN_DATA_ROOT,${repo_root:}/data}
+checkpoints: ${oc.env:META_PFN_CKPT_ROOT,${repo_root:}/checkpoints}

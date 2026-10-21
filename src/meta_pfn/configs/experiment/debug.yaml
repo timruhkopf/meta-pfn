@@ -1,0 +1,8 @@
+# @package _global_
+# Smoke test: tiny end-to-end run of the example pipeline (`just smoke`).
+defaults:
+  - override /task: toy_regression
+
+task:
+  n: 64
+  steps: 50

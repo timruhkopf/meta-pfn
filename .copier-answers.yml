@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; do NOT edit manually
+_commit: v0.4.1
+_src_path: /home/ruhkopf/PycharmProjects/research-template
+author: Tim Ruhkopf
+compute:
+- remote
+cuda_extra: cu126
+description: 'In-context transfer between related tasks with a PFN: is a scarce target
+    task''s prediction improved by a dense, coordinate-warped source task, how much
+    would a Bayes learner gain, and can a Meta-PFN amortize it?'
+email: timruhkopf@googlemail.com
+github_user: timruhkopf
+mlflow: true
+optuna: false
+package_name: meta_pfn
+project_name: meta-pfn
+python: '3.12'
+training: false

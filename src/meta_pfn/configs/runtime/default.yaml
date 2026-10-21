@@ -1,0 +1,4 @@
+# Runtime settings change speed, not results. They are not logged as params (see tracking/params.py).
+# If an experiment varies one of them (e.g. precision), move it into that experiment's semantic config.
+deterministic: false
+num_workers: 0

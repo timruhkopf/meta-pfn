@@ -1,0 +1,8 @@
+name: toy_regression
+n: 256
+dim: 4
+noise: 0.1
+steps: 200
+lr: 0.05
+log_every: 10
+eval_split: val

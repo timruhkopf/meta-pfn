@@ -1,0 +1,28 @@
+# environments and machine settings
+.venv/
+.env
+.env.secrets
+*.local.md
+.claude/settings.local.json
+
+# run outputs (results/ snapshots are committed)
+runs/
+checkpoints/
+outputs/
+multirun/
+mlflow.db
+mlruns/
+data/*
+!data/README.md
+!data/sample/
+
+# python / tools
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.ipynb_checkpoints/
+dist/
+build/
+.idea/

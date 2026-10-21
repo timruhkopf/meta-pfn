@@ -1,0 +1,82 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just test:*)",
+      "Bash(just test-all:*)",
+      "Bash(just lint)",
+      "Bash(just fmt)",
+      "Bash(just smoke)",
+      "Bash(just run local:*)",
+      "Bash(just sweep local:*)",
+      "Bash(just sweep-status:*)",
+      "Bash(just runs:*)",
+      "Bash(just snapshot:*)",
+      "Bash(just notebook:*)",
+      "Bash(just notebooks-check)",
+      "Bash(just refs-check)",
+      "Bash(just log-index)",
+      "Bash(just new-experiment:*)",
+      "Bash(just remote-ps)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(just status)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr status:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(just push)",
+      "Bash(just pull:*)",
+      "Bash(just remote:*)",
+      "Bash(just remote-setup:*)",
+      "Bash(just run detached:*)",
+      "Bash(just run slurm:*)",
+      "Bash(just sweep detached:*)",
+      "Bash(just sweep slurm:*)",
+      "Bash(just sweep-resume:*)",
+      "Bash(just decide:*)",
+      "Bash(just reproduce:*)",
+      "Bash(sbatch:*)",
+      "Bash(ssh:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue close:*)",
+      "Bash(just sync-code:*)"
+    ],
+    "deny": [
+      "Read(./.env.secrets)",
+      "Bash(pip install:*)",
+      "Bash(pkill:*)",
+      "Bash(pgrep:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv run --no-sync python -m meta_pfn.tracking.cli status --brief 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

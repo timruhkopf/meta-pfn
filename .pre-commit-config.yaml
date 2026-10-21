@@ -1,0 +1,49 @@
+# Commit hooks stay fast (< 5 s): tracked runs need a commit first, so slow commits push toward
+# untracked runs. Tests run on push.
+default_stages: [pre-commit]  # hooks without `stages` run on commit only, not again on push / merge
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=2000]
+      - id: check-yaml
+        args: [--unsafe]
+      - id: end-of-file-fixer
+        exclude: \.ipynb$
+      - id: trailing-whitespace
+        exclude: \.ipynb$
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout  # keep outputs (they are the record), drop volatile metadata
+        args: [--keep-output, --extra-keys=metadata.language_info.version cell.metadata.execution]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.13.4
+    hooks:
+      - id: uv-lock
+  - repo: local
+    hooks:
+      - id: pytest
+        name: fast tests
+        entry: uv run --no-sync python -m pytest -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: running-sweeps
+        name: running sweeps after a pull
+        entry: uv run --no-sync python -m meta_pfn.tracking.cli notify-merge
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [post-merge]
