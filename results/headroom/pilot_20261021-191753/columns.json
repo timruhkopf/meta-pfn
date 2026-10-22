@@ -1,0 +1,1 @@
+{"params": ["task.d", "task.kind", "task.sigma"], "metrics": ["final/gain_bayes/n0", "final/gain_bayes/n1", "final/gain_bayes/n2", "final/gain_bayes/n4", "final/gain_bayes/n8", "final/gain_oracle_T/n0", "final/gain_oracle_T/n1", "final/gain_oracle_T/n2", "final/gain_oracle_T/n4", "final/gain_oracle_T/n8", "time/pairs_s"]}

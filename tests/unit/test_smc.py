@@ -77,9 +77,9 @@ def test_kind_outputs_of_the_importance_sampler_recombine_to_bayes() -> None:
     np.testing.assert_allclose(np.exp(w), r["post"], atol=1e-5)
 
 
-def test_pipeline_end_to_end(tmp_path: Path) -> None:
+def _compose(*extra: str):
     with initialize_config_module(config_module="meta_pfn.configs", version_base="1.3"):
-        cfg = compose(
+        return compose(
             config_name="config",
             overrides=[
                 "experiment=sampler_check",
@@ -93,16 +93,35 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
                 "task.n_q=4",
                 "task.n_b=8",
                 "task.threads=2",
+                *extra,
             ],
         )
-    run = Run(tmp_path)
-    sampler_check(cfg, run)
-    tables = {p.stem: pd.read_parquet(p) for p in (run.artifacts / "tables").glob("*.parquet")}
+
+
+def _tables(run: Run) -> dict[str, pd.DataFrame]:
+    return {p.stem: pd.read_parquet(p) for p in (run.artifacts / "tables").glob("*.parquet")}
+
+
+def test_pipeline_end_to_end(tmp_path: Path) -> None:
+    run = Run(tmp_path / "smc")
+    sampler_check(_compose(), run)
+    tables = _tables(run)
     assert set(tables) == {"nll", "posterior", "smc"}
     assert len(tables["nll"]) == 1 * 2 * 7  # pairs x n_A grid x predictors
     assert len(tables["smc"]) == 3  # true family twice, the other once
     post = tables["posterior"]
     np.testing.assert_allclose(post[[c for c in post if c.startswith("p_")]].sum(1), 1.0, rtol=1e-5)
+
+    # regression: kind_is is the importance sampler's, not overwritten by the SMC values
+    run_is = Run(tmp_path / "is")
+    sampler_check(_compose("task.smc=false"), run_is)
+    nll_is = _tables(run_is)["nll"]
+    assert set(nll_is.predictor) == {"lower", "oracle_T", "bayes_is", "kind_is"}
+    key = ["pair", "n_a", "predictor"]
+    both = tables["nll"].merge(nll_is, on=key, suffixes=("", "_is"))
+    np.testing.assert_allclose(both.nll, both.nll_is, rtol=1e-6)
+    w = tables["nll"].pivot_table(index=["pair", "n_a"], columns="predictor", values="nll")
+    assert not np.allclose(w.kind_is, w.kind_smc)
 
 
 def _toy_nll(gap_closed: float, rep_noise: float = 0.0) -> pd.DataFrame:

@@ -1,0 +1,4 @@
+{"member": 0, "overrides": ["experiment=sampler_check", "task.d=1", "task.kind=window"]}
+{"member": 1, "overrides": ["experiment=sampler_check", "task.d=1", "task.kind=warp"]}
+{"member": 2, "overrides": ["experiment=sampler_check", "task.d=2", "task.kind=window"]}
+{"member": 3, "overrides": ["experiment=sampler_check", "task.d=2", "task.kind=warp"]}

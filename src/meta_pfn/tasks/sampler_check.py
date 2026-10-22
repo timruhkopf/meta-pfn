@@ -5,7 +5,8 @@ set as the pilot, so `bayes_is` reproduces it), and the Bayes learner is recompu
 the window and warp families. Within the pair's true kind, the importance-sampling predictive (`kind_is`)
 and the SMC one (`kind_smc`, twice with independent seeds) are compared with the known-T `oracle_T`:
 the gap kind_is → kind_smc is the sampler, the gap kind_smc → oracle_T is the price of inferring T.
-`bayes_smc` mixes over the four kinds with the SMC family evidences.
+`bayes_smc` mixes over the four kinds with the SMC family evidences. `task.smc=false` computes the
+importance-sampling predictors only (lower, oracle_T, bayes_is, kind_is).
 
 Tables: `nll` (pair, seed, n_a, predictor, nll), `posterior` (kind masses under bayes_smc, posterior RMS
 T error of both SMC runs), `smc` (per SMC run: family, rep, seconds, acceptance, tempering stages).
@@ -50,43 +51,51 @@ def sampler_check(cfg: DictConfig, run: Run) -> float:
         r = evaluate_pair(pfn, pairs, j, hyp, grid, t.chunk)
         data = Data(pairs.XB[j], pairs.YB[j], pairs.XA[j], pairs.YA[j], pairs.XQ[j], pairs.YQ[j])
         fits = {}
-        for fam, rep in ((t.kind, 0), (t.kind, 1), (other, 0)):
+        for fam, rep in ((t.kind, 0), (t.kind, 1), (other, 0)) if t.smc else ():
             t0 = time.time()
             g = torch.Generator().manual_seed(s * 10 + rep + 5 * (fam != t.kind))
             truth = pairs.theta[j] if fam == t.kind else None
             fits[fam, rep] = res = smc(pfn, data, fam, family, int(t.k_smc), grid, g, truth, t.n_moves, chunk=t.chunk)
             runs.append((j, s, fam, rep, time.time() - t0, res.accept, int(res.stages[-1])))
         for a, n in enumerate(grid):
-            lz = torch.from_numpy(r["kind_logz"][a]).float()
-            lq = torch.from_numpy(r["kind_logq"][a]).float()  # [4, Q]
-            lz[KINDS4.index(t.kind)] = float(fits[t.kind, 0].logz[a])
-            lz[KINDS4.index(other)] = float(fits[other, 0].logz[a])
-            lq[KINDS4.index(t.kind)] = torch.from_numpy(fits[t.kind, 0].logq[a])
-            lq[KINDS4.index(other)] = torch.from_numpy(fits[other, 0].logq[a])
-            w = log_mass + lz
-            w = w - torch.logsumexp(w, 0)
-            mix = torch.logsumexp(w[:, None] + lq, 0)
-            for name, v in (
+            rows = [
                 ("lower", r["nll"][a, 0]),
                 ("oracle_T", r["nll"][a, 2]),
                 ("bayes_is", r["nll"][a, 3]),
-                ("bayes_smc", -float(mix.mean())),
                 ("kind_is", -float(r["kind_logq"][a, ki].mean())),
-                ("kind_smc", -float(fits[t.kind, 0].logq[a].mean())),
-                ("kind_smc_rep", -float(fits[t.kind, 1].logq[a].mean())),
-            ):
+            ]
+            if t.smc:
+                # copies: the SMC values must not overwrite the importance sampler's (kind_is above)
+                lz = torch.tensor(r["kind_logz"][a], dtype=torch.float32)
+                lq = torch.tensor(r["kind_logq"][a], dtype=torch.float32)  # [4, Q]
+                lz[KINDS4.index(t.kind)] = float(fits[t.kind, 0].logz[a])
+                lz[KINDS4.index(other)] = float(fits[other, 0].logz[a])
+                lq[KINDS4.index(t.kind)] = torch.from_numpy(fits[t.kind, 0].logq[a])
+                lq[KINDS4.index(other)] = torch.from_numpy(fits[other, 0].logq[a])
+                w = log_mass + lz
+                w = w - torch.logsumexp(w, 0)
+                mix = torch.logsumexp(w[:, None] + lq, 0)
+                rows += [
+                    ("bayes_smc", -float(mix.mean())),
+                    ("kind_smc", -float(fits[t.kind, 0].logq[a].mean())),
+                    ("kind_smc_rep", -float(fits[t.kind, 1].logq[a].mean())),
+                ]
+                post.append((j, s, n, *w.exp().tolist(), fits[t.kind, 0].t_err[a], fits[t.kind, 1].t_err[a]))
+            for name, v in rows:
                 nll.append((j, s, n, name, float(v)))
-            post.append((j, s, n, *w.exp().tolist(), fits[t.kind, 0].t_err[a], fits[t.kind, 1].t_err[a]))
         run.log_metric(M.PAIRS_DONE, float(j + 1), j + 1)
 
     nll_df = pd.DataFrame(nll, columns=["pair", "seed", "n_a", "predictor", "nll"])
     run.log_table("nll", nll_df)
-    cols = ["pair", "seed", "n_a", *(f"p_{k}" for k in KINDS4), "t_err", "t_err_rep"]
-    run.log_table("posterior", pd.DataFrame(post, columns=cols))
-    run.log_table("smc", pd.DataFrame(runs, columns=["pair", "seed", "family", "rep", "seconds", "accept", "stages"]))
+    if t.smc:
+        cols = ["pair", "seed", "n_a", *(f"p_{k}" for k in KINDS4), "t_err", "t_err_rep"]
+        run.log_table("posterior", pd.DataFrame(post, columns=cols))
+        smc_cols = ["pair", "seed", "family", "rep", "seconds", "accept", "stages"]
+        run.log_table("smc", pd.DataFrame(runs, columns=smc_cols))
+    col = "kind_smc" if t.smc else "kind_is"
     w = nll_df.pivot_table(index=["pair", "n_a"], columns="predictor", values="nll").reset_index()
     for n in grid:
         g = w.loc[w.n_a == n]
-        run.log_summary(**{f"{M.GAIN_KIND_SMC}/n{n}": float((g.lower - g.kind_smc).mean())})
+        run.log_summary(**{f"{M.GAIN_KIND_SMC if t.smc else M.GAIN_KIND_IS}/n{n}": float((g.lower - g[col]).mean())})
     g = w.loc[w.n_a == grid[min(2, len(grid) - 1)]]
-    return float((g.lower - g.kind_smc).mean())
+    return float((g.lower - g[col]).mean())

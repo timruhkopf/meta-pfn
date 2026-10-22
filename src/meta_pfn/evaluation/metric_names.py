@@ -13,3 +13,4 @@ TIME_PREFIX = "time/"
 
 # sampler_check (E0 follow-up)
 GAIN_KIND_SMC = "final/gain_kind_smc"  # + "/n<n_A>": NLL_lower - NLL of the SMC learner told the true kind
+GAIN_KIND_IS = "final/gain_kind_is"  # + "/n<n_A>": NLL_lower - NLL of the importance sampler told the true kind
