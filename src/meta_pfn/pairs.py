@@ -62,7 +62,7 @@ class Pairs:
     d: int
     kind: str
     seeds: list[int]
-    sigma: float
+    rho: float
     theta: torch.Tensor  # [P, d, 4] the true T (identity for `identity` / `unrelated`)
     XB: torch.Tensor  # [P, n_B, d]
     YB: torch.Tensor  # [P, n_B]
@@ -79,19 +79,19 @@ class Pairs:
 WEIGHTS = ("W_in", "b_in", "W_h", "b_h", "W_out", "b_out")
 
 
-def function(f_seed: int, d: int, sigma: float = 0.0, pert_seed: int = 0):
-    """The BNN function `f_seed`; with sigma > 0 a relative of it: every nonzero weight becomes
-    sqrt(1 - σ²) w + σ rms(w) ε. This is variance-preserving with the same architecture and masks, so it is
-    still a prior draw; σ = 1 gives independent weights."""
+def function(f_seed: int, d: int, rho: float = 0.0, pert_seed: int = 0):
+    """The BNN function `f_seed`; with rho > 0 a relative of it: every nonzero weight becomes
+    sqrt(1 - ρ²) w + ρ rms(w) ε. This is variance-preserving with the same architecture and masks, so it is
+    still a prior draw; ρ = 1 gives independent weights."""
     prior = make_prior(x_dim=d, batch_size=1, seed=f_seed)
-    if sigma > 0:
+    if rho > 0:
         g = torch.Generator().manual_seed(pert_seed)
         for name in WEIGHTS:
             w = getattr(prior, name)
             eps = torch.randn(w.shape, generator=g)
             nz = w[w != 0]
             scale = nz.pow(2).mean().sqrt() if len(nz) else w.new_zeros(())  # rms over the live weights
-            setattr(prior, name, (1 - sigma**2) ** 0.5 * w + sigma * scale * eps * (w != 0))
+            setattr(prior, name, (1 - rho**2) ** 0.5 * w + rho * scale * eps * (w != 0))
     return prior
 
 
@@ -111,9 +111,9 @@ def draw_pairs(
     n_a_max: int,
     n_q: int,
     family: WarpFamily,
-    sigma: float = 0.0,
+    rho: float = 0.0,
 ) -> Pairs:
-    """sigma: A's function is a weight-space relative of B's (`function`); 0 = the same function."""
+    """rho: A's function is a weight-space relative of B's (`function`); 0 = the same function."""
     seeds = [pair_seed(split, d, kind, i) for i in range(n_pairs)]
     cols: dict[str, list[torch.Tensor]] = {k: [] for k in ("th", "XB", "YB", "XA", "YA", "XQ", "YQ")}
     for s in seeds:
@@ -122,11 +122,11 @@ def draw_pairs(
         xb = torch.rand(n_b, d, generator=g)
         xa = torch.rand(n_a_max, d, generator=g)
         xq = torch.rand(n_q, d, generator=g)
-        f_a = function(s, d, sigma, pert_seed=s + 3)
+        f_a = function(s, d, rho, pert_seed=s + 3)
         f_b = function(s + 7_777_777, d) if kind == "unrelated" else function(s, d)
         y_aq = observe(f_a, s + 1, apply_warp(theta, torch.cat([xa, xq])[None])[0])
         y_b = observe(f_b, s + 2, xb)
         for k, v in zip(cols, (theta[0], xb, y_b, xa, y_aq[:n_a_max], xq, y_aq[n_a_max:]), strict=True):
             cols[k].append(v)
     st = {k: torch.stack(v) for k, v in cols.items()}
-    return Pairs(d, kind, seeds, sigma, st["th"], st["XB"], st["YB"], st["XA"], st["YA"], st["XQ"], st["YQ"])
+    return Pairs(d, kind, seeds, rho, st["th"], st["XB"], st["YB"], st["XA"], st["YA"], st["XQ"], st["YQ"])

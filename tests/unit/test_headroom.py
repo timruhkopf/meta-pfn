@@ -21,8 +21,8 @@ MASS = {"unrelated": 0.25, "identity": 0.25, "window": 0.25, "warp": 0.25}
 
 
 def test_pairs_are_reproducible_and_disjoint() -> None:
-    a = draw_pairs(2, "warp", 0, 2, 8, 4, 4, FAM, sigma=0.05)
-    b = draw_pairs(2, "warp", 0, 2, 8, 4, 4, FAM, sigma=0.05)
+    a = draw_pairs(2, "warp", 0, 2, 8, 4, 4, FAM, rho=0.05)
+    b = draw_pairs(2, "warp", 0, 2, 8, 4, 4, FAM, rho=0.05)
     torch.testing.assert_close(a.YA, b.YA)
     assert pair_seed(0, 2, "warp", 0) != pair_seed(1, 2, "warp", 0)
     assert pair_seed(0, 2, "warp", 0) != pair_seed(0, 2, "window", 0)
@@ -80,11 +80,11 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     assert len(tables["nll"]) == 2 * 5 * 4  # pairs x n_A grid x predictors
 
 
-def _g(kind, sigma, n_a, bayes, lo, hi, oracle, d=1):
+def _g(kind, rho, n_a, bayes, lo, hi, oracle, d=1):
     return {
         "d": d,
         "kind": kind,
-        "sigma": sigma,
+        "rho": rho,
         "n_a": n_a,
         "gain_bayes": bayes,
         "gain_bayes_lo": lo,
@@ -101,7 +101,7 @@ def _table(related_gain, lo, hi):
             for n in (2, 4, 8):
                 rows.append(_g(kind, s, n, related_gain, lo, hi, 1.0))
     g = pd.DataFrame(rows)
-    return g, g[["d", "kind", "sigma", "n_a"]].assign(mc_error=0.01)
+    return g, g[["d", "kind", "rho", "n_a"]].assign(mc_error=0.01)
 
 
 def test_verdict_rule() -> None:
@@ -119,7 +119,7 @@ def test_gains_and_mc_error_from_tables() -> None:
         {
             "d": 1,
             "kind": "window",
-            "sigma": 0.0,
+            "rho": 0.0,
             "pair": np.repeat([0, 1], 4),
             "n_a": 2,
             "predictor": ["lower", "naive", "oracle_T", "bayes"] * 2,
@@ -128,8 +128,6 @@ def test_gains_and_mc_error_from_tables() -> None:
     )
     g = gains(nll, n_boot=100).iloc[0]
     assert g.gain_bayes == pytest.approx(0.5) and g.gain_oracle == pytest.approx(1.0) and pytest.approx(0.5) == g.G
-    mc = pd.DataFrame(
-        {"d": 1, "kind": "window", "sigma": 0.0, "pair": [0], "n_a": 2, "bayes_1": [0.5], "bayes_2": [0.3]}
-    )
+    mc = pd.DataFrame({"d": 1, "kind": "window", "rho": 0.0, "pair": [0], "n_a": 2, "bayes_1": [0.5], "bayes_2": [0.3]})
     assert mc_error(mc).mc_error.iloc[0] == pytest.approx(0.2 / np.sqrt(2))
-    assert Rule().go_sigma == 0.1
+    assert Rule().go_rho == 0.1

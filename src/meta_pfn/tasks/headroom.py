@@ -1,6 +1,6 @@
 """E0 headroom: what is a dense related task B worth for predicting a scarce task A, to a Bayes learner?
 
-One member = one cell (d, kind, sigma). For every pair and n_A in the grid, the four predictors of
+One member = one cell (d, kind, rho). For every pair and n_A in the grid, the four predictors of
 `oracle.py`, scored by the mean NLL of A's held-out queries. A duplicate run with an independent
 hypothesis set on the first `n_mc_pairs` pairs measures the Bayes oracle's Monte-Carlo error.
 
@@ -35,7 +35,7 @@ def headroom(cfg: DictConfig, run: Run) -> float:
     grid = list(t.n_a_grid)
 
     t0 = time.time()
-    pairs = draw_pairs(t.d, t.kind, t.split, t.n_pairs, t.n_b, max(grid), t.n_q, family, t.sigma)
+    pairs = draw_pairs(t.d, t.kind, t.split, t.n_pairs, t.n_b, max(grid), t.n_q, family, t.rho)
     hyp = hypotheses(t.d, family, k, mass, torch.Generator().manual_seed(cfg.seed))
     hyp_mc = hypotheses(t.d, family, k, mass, torch.Generator().manual_seed(cfg.seed + 1))
     nll, post, mc = [], [], []

@@ -2,6 +2,6 @@
 # E0: what is a dense, coordinate-warped, related task B worth to a Bayes learner predicting a scarce task
 # A? Measured with the frozen pfn_large (predictive and likelihood); no training. Pre-registration:
 # notebooks/01_*_headroom.ipynb.
-# Sweep: task.d=1,2 task.kind=identity,window,warp task.sigma=0,0.05,0.1 (+ kind=unrelated, sigma=0)
+# Sweep: task.d=1,2 task.kind=identity,window,warp task.rho=0,0.05,0.1 (+ kind=unrelated, rho=0)
 defaults:
   - override /task: headroom

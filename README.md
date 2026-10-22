@@ -56,7 +56,7 @@ using the frozen `pfn_large` as both the predictive and the likelihood:
 
 | | |
 |---|---|
-| **Pairs** | one BNN-prior function, seen by B directly and by A through a per-axis warp into a sub-window (identity, affine window, Kumaraswamy warp), with A's weights perturbed by σ (Spearman ≈ 1 / 0.9 / 0.7), plus unrelated pairs |
+| **Pairs** | one BNN-prior function, seen by B directly and by A through a per-axis warp into a sub-window (identity, affine window, Kumaraswamy warp), with A's weights perturbed by ρ (Spearman ≈ 1 / 0.9 / 0.7), plus unrelated pairs |
 | **lower** | PFN(A): A alone |
 | **naive** | PFN(B ∪ A): pooling without registration |
 | **oracle_T** | PFN(B ∪ T(A)): the warp known |

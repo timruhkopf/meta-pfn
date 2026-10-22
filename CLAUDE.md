@@ -23,6 +23,8 @@ in notebook 01. Gate: no Meta-PFN model or training code (E1, #2) unless E0 is G
   contexts. A "gain" over a different model is prior mismatch, not transfer (decision 0002).
 - **Always report** the identity sanity stratum, the unrelated (negative-transfer) stratum and the
   oracle's MC error next to any gain.
+- **ρ is relatedness, σ is observation noise.** `rho` = how far A's function is from B's (0 = same);
+  logs, notebooks and runs before 2026-10-22 call it σ / `task.sigma`.
 - Minimization conventions don't apply here (prediction, not optimization); y is on the BNN prior's
   ECDF scale [0, 1].
 ## Commands

@@ -14,11 +14,11 @@ import pandas as pd
 
 from .stats import bootstrap_ci
 
-CELL = ["d", "kind", "sigma"]
+CELL = ["d", "kind", "rho"]
 
 
 def gains(nll: pd.DataFrame, n_boot: int = 4000) -> pd.DataFrame:
-    """nll: the `nll` table with the cell columns d, kind, sigma. -> one row per (cell, n_a)."""
+    """nll: the `nll` table with the cell columns d, kind, rho. -> one row per (cell, n_a)."""
     w = nll.pivot_table(index=[*CELL, "pair", "n_a"], columns="predictor", values="nll").reset_index()
     rows = []
     for key, g in w.groupby([*CELL, "n_a"]):
@@ -43,7 +43,7 @@ def mc_error(mc: pd.DataFrame) -> pd.DataFrame:
 class Rule:
     gate_kinds: tuple[str, ...] = ("window", "warp")
     gate_n: tuple[int, ...] = (2, 4, 8)
-    go_sigma: float = 0.1
+    go_rho: float = 0.1
     go_n: tuple[int, ...] = (2, 4)
     kill_below: float = 0.05
     go_above: float = 0.10
@@ -57,14 +57,14 @@ def verdict(g: pd.DataFrame, mc: pd.DataFrame, rule: Rule | None = None) -> dict
     """The pre-registered E0 rule (notebook 01). Returns the verdict and the checks behind it."""
     rule = rule or Rule()
     g = g.merge(mc, on=[*CELL, "n_a"], how="left")
-    ident = g.loc[(g.kind == "identity") & (g.sigma == 0) & (g.n_a == max(rule.gate_n))]
+    ident = g.loc[(g.kind == "identity") & (g.rho == 0) & (g.n_a == max(rule.gate_n))]
     sane = bool(len(ident)) and bool((ident.gain_bayes >= rule.identity_recovery * ident.gain_oracle).all())
     gate = g.loc[g.kind.isin(rule.gate_kinds) & g.n_a.isin(rule.gate_n)]
-    headroom = bool((gate.loc[gate.sigma == 0, "gain_oracle"] > 0).all())
+    headroom = bool((gate.loc[gate.rho == 0, "gain_oracle"] > 0).all())
     invalid_cells = gate.loc[gate.mc_error > rule.max_mc_error]
     unrel = g.loc[(g.kind == "unrelated") & (g.n_a >= 1)]
     safe = bool((unrel.gain_bayes_lo > rule.harm_floor).all())
-    go = g.loc[g.kind.isin(rule.gate_kinds) & (g.sigma == rule.go_sigma) & g.n_a.isin(rule.go_n)]
+    go = g.loc[g.kind.isin(rule.gate_kinds) & (g.rho == rule.go_rho) & g.n_a.isin(rule.go_n)]
     checks = {
         "sanity_identity_recovered": sane,
         "sanity_headroom_with_T_known": headroom,

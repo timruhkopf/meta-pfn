@@ -33,6 +33,7 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   say how tasks differ, and its evaluation needs this reference.
 - **Pointers.** Issue #3; log `2026-10-21_headroom.md` (§2 calibration); notebook 01.
 - **Status.** open
+- **Status (2026-10-22).** Tracked in issue #5, with options incl. lifting relatedness into an extra input dimension.
 
 ## Relatedness measured in noise units, not rank correlation (2026-10-22)
 
@@ -56,4 +57,30 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   at d ≤ 2 the importance sampler collapsed (sampler_check §1). Per-axis warps are the realistic HPO case.
 - **Revisit when.** The SMC reference is validated at d ≤ 2 (sampler_check) and E0 is GO or NARROW.
 - **Pointers.** Notebook 01, limits.
+- **Status.** open
+
+## Acquisition-biased designs for B and A (2026-10-22)
+
+- **Idea.** Draw B's (and A's early) points from a previous optimizer's trajectory instead of uniformly:
+  a real cheap BO policy, or a Boltzmann density ∝ exp(−f/τ) with random τ plus post-hoc log filtering.
+  B then covers its good region densely and the rest thinly, as in a real previous HPO run.
+- **Why deferred.** E0 first has to show that a uniform, dense B is worth anything (#1). If the selection
+  depends only on observed points, it is ignorable for the Bayes posterior; it then matters for amortization
+  (a PFN trained on uniform designs is out of distribution) and for coverage gaps, both E1 concerns.
+  It also rules out architecture ideas that lean on B's or A's x-ranking.
+- **Revisit when.** E1 prior design; it becomes its own GitHub issue then. #3 lists trace-biased B as one stratum.
+- **Pointers.** #3; the project brief (memory, not in git) §4.
+- **Status.** open
+
+## Meta-acquisition: choose queries that disambiguate the relation (2026-10-22)
+
+- **Idea.** Once T (and the output relation) is latent, some query points are worth evaluating mainly
+  because they pin T down, which then makes all of B's data usable at once. An acquisition function should
+  value that, e.g. entropy search over the joint of (x*, T), not only over A's surface. Early in a run, the
+  best query may be the one that identifies the transform; this is likely where the largest gains over
+  standard transfer BO lie.
+- **Why deferred.** It needs a learner whose predictive is honest about T-uncertainty (E0 reference or an E1
+  Meta-PFN) and a BO loop; Phase 0 measures prediction only.
+- **Revisit when.** An E1 model realizes a gain and BO evaluation is designed.
+- **Pointers.** Issue #6; E0 `bayes` / `smc.py` give p(T | D) at small d for a first test.
 - **Status.** open

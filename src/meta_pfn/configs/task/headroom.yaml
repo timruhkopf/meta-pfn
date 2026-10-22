@@ -2,7 +2,7 @@
 name: headroom
 d: 1
 kind: window          # identity | window | warp | unrelated (pairs.py)
-sigma: 0.0            # A's function is a weight-space relative of B's (0 = same; 0.05 / 0.1 ~ Spearman 0.9 / 0.7)
+rho: 0.0              # relatedness, task.sigma before 2026-10-22: A is a weight-space relative of B (0 = same; 0.05 / 0.1 ~ Spearman 0.9 / 0.7)
 split: 0              # pair seed range (pairs.py::pair_seed): 0 pilot, 1 confirm
 n_pairs: 50
 n_b: 32               # B's points: n_B + n_A <= 40, inside pfn_large's n <= 100

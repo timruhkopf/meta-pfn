@@ -1,6 +1,6 @@
 """E0 follow-up: is the Bayes learner's low share G on warp pairs the sampler or the data?
 
-On the first `n_pairs` pilot pairs of one cell (σ = 0), the E0 predictors are recomputed (same hypothesis
+On the first `n_pairs` pilot pairs of one cell (ρ = 0), the E0 predictors are recomputed (same hypothesis
 set as the pilot, so `bayes_is` reproduces it), and the Bayes learner is recomputed with SMC (`smc.py`) for
 the window and warp families. Within the pair's true kind, the importance-sampling predictive (`kind_is`)
 and the SMC one (`kind_smc`, twice with independent seeds) are compared with the known-T `oracle_T`:
