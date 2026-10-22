@@ -75,7 +75,9 @@ def _contexts(xb, yb, xa, ya, theta, uses_b, n):
 def evaluate_pair(pfn, pair, j: int, hyp: Hypotheses, n_grid: list[int], chunk: int = 512) -> dict[str, np.ndarray]:
     """-> {"nll": [len(n_grid), 4] mean query NLL of (lower, naive, oracle_T, bayes);
     "post": [len(n_grid), 4] posterior mass of (unrelated, identity, window, warp);
-    "ess": [len(n_grid), 2] effective sample size within the window and warp particles}."""
+    "ess": [len(n_grid), 2] effective sample size within the window and warp particles;
+    "kind_logz": [len(n_grid), 4] log p(A_<n | D_B, kind) per kind (unrelated, identity, window, warp);
+    "kind_logq": [len(n_grid), 4, Q] log predictive density of each query given the kind}."""
     xb, yb, xa, ya, xq, yq = pair.XB[j], pair.YB[j], pair.XA[j], pair.YA[j], pair.XQ[j], pair.YQ[j]
     n_max = max(n_grid)
     true = Hypotheses(
@@ -92,7 +94,7 @@ def evaluate_pair(pfn, pair, j: int, hyp: Hypotheses, n_grid: list[int], chunk: 
         q = apply_warp(hyp.theta, xa[None, i : i + 1].expand(len(hyp.kinds), -1, -1))
         ll[:, i] = logp(pfn, X, Y, M, q, ya[i : i + 1][None].expand(len(hyp.kinds), -1), chunk)[:, 0]
 
-    nll, post, ess = [], [], []
+    nll, post, ess, kz, kq = [], [], [], [], []
     kinds = np.asarray(hyp.kinds)
     for n in n_grid:
         X, Y, M = _contexts(xb, yb, xa, ya, hyp.theta, hyp.uses_b, n)
@@ -112,7 +114,22 @@ def evaluate_pair(pfn, pair, j: int, hyp: Hypotheses, n_grid: list[int], chunk: 
             wk = pw[kinds == k]
             e.append(float(wk.sum() ** 2 / max((wk**2).sum(), 1e-300)))
         ess.append(e)
-    return {"nll": np.asarray(nll), "post": np.asarray(post), "ess": np.asarray(ess)}
+        z, qk = [], []
+        for k in KINDS4:  # within-kind posterior: drop the kind's prior mass, keep the 1/K particle weights
+            m = torch.from_numpy(kinds == k)
+            lk = lw[m] - torch.logsumexp(hyp.log_prior[m], 0)
+            z.append(float(torch.logsumexp(lk, 0)))
+            qk.append(torch.logsumexp((lk - torch.logsumexp(lk, 0))[:, None] + lq[m], 0).numpy())
+        kz.append(z)
+        kq.append(np.stack(qk))
+    return {
+        "nll": np.asarray(nll),
+        "post": np.asarray(post),
+        "ess": np.asarray(ess),
+        "kind_logz": np.asarray(kz),
+        "kind_logq": np.stack(kq),
+    }
 
 
 PREDICTORS = ("lower", "naive", "oracle_T", "bayes")
+KINDS4 = ("unrelated", "identity", "window", "warp")

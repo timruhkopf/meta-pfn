@@ -50,7 +50,7 @@ def headroom(cfg: DictConfig, run: Run) -> float:
             for a, n in enumerate(grid):
                 mc.append((j, pairs.seeds[j], n, r["nll"][a, 3], r2["nll"][a, 3]))
         if (j + 1) % 10 == 0:
-            run.log_metric(M.PAIRS_DONE, j + 1, j + 1)
+            run.log_metric(M.PAIRS_DONE, float(j + 1), j + 1)
     run.log_summary(**{M.TIME_PREFIX + "pairs_s": time.time() - t0})
 
     nll_df = pd.DataFrame(nll, columns=["pair", "seed", "n_a", "predictor", "nll"])
