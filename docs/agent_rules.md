@@ -35,3 +35,5 @@ Read `docs/process.md`, the current phase in `CLAUDE.md`, and the latest entries
 - Use the `workflow` skill (`.claude/skills/workflow/`) at natural checkpoints: work started or finished,
   before a launch, when results arrive. `just status` shows the state; name the exact next command, briefly.
 - Issues for ideas/experiments/bugs, a branch per issue (`exp/<N>-<slug>`), draft PRs that close the issue.
+- When a design choice, pre-registration or verdict narrows the scope, add an entry to
+  `research_log/deferred.md` (what, why deferred, when to revisit); append status lines, never rewrite.
