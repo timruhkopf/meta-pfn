@@ -26,3 +26,8 @@ with deliverables and open questions.
 - Verified: 6/6 members DONE, 50 pairs each; the rule gives IMPRECISE (5 gate cells over the MC limit), identity
   sanity passes (G = 1.00 at 8d). Numbers in log `2026-10-22_outmap.md` §2.
 - Next: a finer-sampler re-run of the gate cells on ulysses (pre-registered consequence of IMPRECISE).
+
+### 2026-10-23 12:00 — E0b finer-sampler re-run analysed
+- Done: `results/outmap/pilot_20261023-112025` fetched from ulysses (the remote copy moved to runs/_moved_snapshots/);
+  notebook 03 uses it for the gate cells; log §3.
+- Verified: 2/2 DONE; the rule gives IMPRECISE with 1 imprecise gate cell (0.030 at d = 1, n_A = 2), down from 5.
