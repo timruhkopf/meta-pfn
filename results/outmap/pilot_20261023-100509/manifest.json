@@ -1,0 +1,30 @@
+{
+ "id": "pilot_20261023-100509",
+ "experiment": "outmap",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=outmap task.d=2 task.kind=identity,outmap,unrelated task.device=cuda",
+ "overrides": [
+  "experiment=outmap",
+  "task.d=2",
+  "task.kind=identity,outmap,unrelated",
+  "task.device=cuda"
+ ],
+ "backend": "detached",
+ "commit": "67d09dd190a303d3d2d19838ba0291c3bb6761cd",
+ "branch": "HEAD",
+ "tag": "sweep/outmap/pilot_20261023-100509",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-10-23T10:05:09",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 3
+ },
+ "first_start": "2026-10-23T10:05:11",
+ "last_end": "2026-10-23T10:17:11",
+ "wall_h": 0.199,
+ "device_h": 0.0,
+ "snapshot_created": "2026-10-23T11:14:48",
+ "sweep_dir": "runs/outmap/pilot_20261023-100509"
+}

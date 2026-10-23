@@ -19,3 +19,10 @@ with deliverables and open questions.
   49–72% of the importance sampler's gap at d = 1 warp (`results/sampler_check/pilot_20261022-085704` +
   `..._143116`). Not yet recorded with `just decide`.
 - Not done: the overnight ulysses checks requested 2026-10-22 were not scheduled before the session paused.
+
+### 2026-10-23 11:30 — E0b outmap pilot analysed (commit: see git log, "E0b pilot")
+- Done: snapshots `results/outmap/pilot_20261023-083513` (d = 1) and `..._100509` (d = 2, fetched from ulysses);
+  notebook 03 loads both and executes end to end (nbconvert); Observations and Verdict cells written; log §2.
+- Verified: 6/6 members DONE, 50 pairs each; the rule gives IMPRECISE (5 gate cells over the MC limit), identity
+  sanity passes (G = 1.00 at 8d). Numbers in log `2026-10-22_outmap.md` §2.
+- Next: a finer-sampler re-run of the gate cells on ulysses (pre-registered consequence of IMPRECISE).

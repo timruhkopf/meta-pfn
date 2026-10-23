@@ -1,0 +1,6 @@
+# @package _global_
+# E0b: is B worth anything when A differs only by a monotone output map? x is shared (no warp), so the
+# only relation to infer is g. Frozen pfn_large, no training. Pre-registration: notebooks/03_*_outmap.ipynb.
+# Sweep: task.d=1,2 task.kind=identity,outmap,unrelated
+defaults:
+  - override /task: outmap

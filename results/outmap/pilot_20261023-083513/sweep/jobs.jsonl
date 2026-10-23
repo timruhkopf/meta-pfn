@@ -1,0 +1,3 @@
+{"member": 0, "overrides": ["experiment=outmap", "task.d=1", "task.kind=identity"]}
+{"member": 1, "overrides": ["experiment=outmap", "task.d=1", "task.kind=outmap"]}
+{"member": 2, "overrides": ["experiment=outmap", "task.d=1", "task.kind=unrelated"]}
