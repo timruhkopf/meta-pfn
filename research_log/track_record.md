@@ -44,3 +44,17 @@ with deliverables and open questions.
 ### 2026-10-23 13:00 — Phase-1 round 1 closed (commit: "Phase-1 update")
 - Verified: the variant run `…-123300` is DONE; the no-evidence check holds; numbers in notebook 04 (Update), RESULTS.md, log §2.
 - Open: equal-budget comparison; a direction signal for position errors; the A-only PFN as the read-out; d = 2.
+
+### 2026-10-23 14:15 — Weekend mandate (session 63423c6c, issue #12, branch exp/12-metapfn)
+- Mandate (user, 2026-10-23 ~13:30, verbatim intent): take over the problem-formulation session's ulysses work and
+  finish it without the user's help; "run the experiments attempting to meta learn how to use B to make better
+  predictions on A despite transforms / warps"; ulysses when its GPU is free on the weekend; a complete report in
+  chat and in a notebook. Do not ask anything during the user's absence.
+- Goal: train models end-to-end on raw (A, B) from the phase-1 pair prior (T and h factorial + an unrelated
+  stratum), no oracle input at test time, and measure how much of B's oracle value (m*, effective-data curve of
+  notebook 04) they realize, against the same model's A-only mode and the A-only PFN, with identity / unrelated /
+  shuffled-B controls. Experiment `metapfn`, notebook 05.
+- Deadline: Mon 2026-10-26 09:00. Launches: local CPU (tests, smoke) and ulysses (RTX 3090) from Fri 18:00, each
+  after checking it is idle (nvidia-smi, ps). Owner of ulysses this weekend: this session; session 0e7b4868's
+  heartbeat (cron 55d1d204) stands down when it sees this entry.
+- Scope exception: Meta-PFN training before an E0 GO is user-directed; recorded as decision 0003.
