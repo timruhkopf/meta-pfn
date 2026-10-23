@@ -1,0 +1,24 @@
+{
+ "id": "sanity_20261023-083233",
+ "experiment": "outmap",
+ "stage": "sanity",
+ "kind": "grid",
+ "command": "just run local sanity experiment=outmap task.d=1 task.kind=identity task.n_pairs=2 task.n_mc_pairs=1",
+ "overrides": [
+  "experiment=outmap",
+  "task.d=1",
+  "task.kind=identity",
+  "task.n_pairs=2",
+  "task.n_mc_pairs=1"
+ ],
+ "backend": "local",
+ "commit": "3d681cb1fa64cc5bc37b6d36aed51869ce4bba95",
+ "branch": "exp/1-headroom",
+ "tag": "sweep/outmap/sanity_20261023-083233",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-10-23T08:32:33",
+ "n_members": 1
+}

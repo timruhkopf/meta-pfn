@@ -33,7 +33,7 @@ def logp(
         x, y, m = X[sl], Y[sl], M[sl]
         if x.shape[1] == 0:  # one masked dummy token: attention to nothing = the PFN's no-data prediction
             x, y, m = x.new_zeros(len(x), 1, d), y.new_zeros(len(y), 1), m.new_zeros(len(m), 1)
-        nf = torch.full((len(x),), d, dtype=torch.long)
+        nf = torch.full((len(x),), d, dtype=torch.long, device=x.device)
         kv = pfn.context_kv(x, y, n_features=nf, train_key_padding_mask=m)
         lg = pfn.logits_from_context_kv(kv, Xq[sl], n_features=nf, train_key_padding_mask=m).float()
         out.append(-pfn.bar_dist(lg, Yq[sl]))

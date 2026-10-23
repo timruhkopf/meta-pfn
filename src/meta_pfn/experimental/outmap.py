@@ -122,7 +122,10 @@ def draw_pairs(
 
 def chain(pfn, xb, yb, xa, ya, xq, yq, ab, use_b: bool, n_grid: list[int], chunk: int):
     """For hypotheses ab [H, 2] that all use B or all ignore it: the chain-rule log likelihood of A's points
-    ll [H, n_max], ll[h, i] = log p(y_i | ctx_h(A_<i)), and the query log densities lq [len(n_grid), H, Q]."""
+    ll [H, n_max], ll[h, i] = log p(y_i | ctx_h(A_<i)), and the query log densities lq [len(n_grid), H, Q].
+    Computed on the PFN's device; returned on the CPU."""
+    dev = next(pfn.parameters()).device
+    xb, yb, xa, ya, xq, yq, ab = (t.to(dev) for t in (xb, yb, xa, ya, xq, yq, ab))
     H, n_max = len(ab), max(n_grid)
     ua, ja = kum_inv(ya, ab), log_jac_inv(ya, ab)  # [H, n_max]
     uq, jq = kum_inv(yq, ab), log_jac_inv(yq, ab)  # [H, Q]
@@ -130,9 +133,9 @@ def chain(pfn, xb, yb, xa, ya, xq, yq, ab, use_b: bool, n_grid: list[int], chunk
     def ctx(n: int):
         x = torch.cat([xb, xa[:n]]) if use_b else xa[:n]
         y = torch.cat([yb[None].expand(H, -1), ua[:, :n]], 1) if use_b else ua[:, :n]
-        return x[None].expand(H, -1, -1), y, torch.ones(H, len(x), dtype=torch.bool)
+        return x[None].expand(H, -1, -1), y, torch.ones(H, len(x), dtype=torch.bool, device=dev)
 
-    ll = torch.zeros(H, n_max)
+    ll = torch.zeros(H, n_max, device=dev)
     for i in range(n_max):
         X, Y, M = ctx(i)
         ll[:, i] = logp(pfn, X, Y, M, xa[None, i : i + 1].expand(H, -1, -1), ua[:, i : i + 1], chunk)[:, 0] + ja[:, i]
@@ -140,7 +143,7 @@ def chain(pfn, xb, yb, xa, ya, xq, yq, ab, use_b: bool, n_grid: list[int], chunk
     for n in n_grid:
         X, Y, M = ctx(n)
         lq.append(logp(pfn, X, Y, M, xq[None].expand(H, -1, -1), uq, chunk) + jq)
-    return ll, torch.stack(lq)
+    return ll.cpu(), torch.stack(lq).cpu()
 
 
 def _log_normal(z: torch.Tensor, m: torch.Tensor, L: torch.Tensor) -> torch.Tensor:

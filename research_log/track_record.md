@@ -8,3 +8,14 @@ Autonomous agent sessions start with their mandate (goal, deadline, which launch
 with deliverables and open questions.
 
 ## Entries
+
+### 2026-10-23 08:40 — E0b outmap built and launched (commits e562821, 3d681cb)
+- Done: σ → rho rename (ef6c99b); sampler_check fix of `kind_is` overwritten in place by SMC values, with a
+  regression test, and an importance-sampling-only recompute (b0b81c7, `runs/sampler_check/pilot_20261022-143116`);
+  E0b outmap pairs, predictors, AMIS over g, analysis rule, tests; notebook 03 description and working hypotheses.
+- Verified: 81 tests pass, ruff clean; the recompute reproduces every shared predictor of the SMC sweep exactly
+  (max |diff| 0.0); outmap sanity controls (log `2026-10-22_outmap.md` §1).
+- sampler_check verdict by its rule: IMPRECISE (SMC replicate error > 0.10 in 4 of 6 warp cells); SMC closes
+  49–72% of the importance sampler's gap at d = 1 warp (`results/sampler_check/pilot_20261022-085704` +
+  `..._143116`). Not yet recorded with `just decide`.
+- Not done: the overnight ulysses checks requested 2026-10-22 were not scheduled before the session paused.

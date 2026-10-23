@@ -29,7 +29,7 @@ def outmap(cfg: DictConfig, run: Run) -> float:
     seed_everything(cfg.seed)
     torch.set_num_threads(t.threads)
     family = OutputFamily(**OmegaConf.to_container(t.family))
-    pfn = load(t.pfn)[0].eval()
+    pfn = load(t.pfn)[0].eval().to(t.device)
     mass = {k: float(v) for k, v in OmegaConf.to_container(t.hypothesis_mass).items()}
     grid = [m * t.d for m in t.n_a_mult]
     n_b = int(t.n_b_by_d[t.d])

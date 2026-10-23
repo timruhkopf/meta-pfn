@@ -16,4 +16,5 @@ rounds: 4             # adaptive importance-sampling rounds
 n_mc_pairs: 10        # pairs re-evaluated with independent draws (Monte-Carlo error)
 pfn: pfn_large
 threads: 16
+device: cpu           # cuda on a GPU box (the frozen PFN and its inputs; the rest stays on the CPU)
 chunk: 512
