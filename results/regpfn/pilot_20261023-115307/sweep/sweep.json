@@ -1,0 +1,23 @@
+{
+ "id": "pilot_20261023-115307",
+ "experiment": "regpfn",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just run detached pilot experiment=regpfn task.mode=back task.seed_mode=perturb task.n_iter=0",
+ "overrides": [
+  "experiment=regpfn",
+  "task.mode=back",
+  "task.seed_mode=perturb",
+  "task.n_iter=0"
+ ],
+ "backend": "detached",
+ "commit": "c1f9f3d4146dff33f2fb57def211f8814f8e7222",
+ "branch": "HEAD",
+ "tag": "sweep/regpfn/pilot_20261023-115307",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ulysses",
+ "created": "2026-10-23T11:53:07",
+ "n_members": 1
+}

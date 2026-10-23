@@ -159,8 +159,10 @@ def train_back(
     batch: int = 32,
     n_b: int = 256,
     log=print,
+    resid: bool = False,
+    max_step: float | None = None,
 ):
-    model = RegBack(d, n_iter=n_iter).to(device)
+    model = RegBack(d, n_iter=n_iter, resid=resid, max_step=max_step).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=3e-4)
     priors = {c: PairPrior(PriorCfg(d=d), batch, seed + 31 * i, device) for i, c in enumerate(CELLS)}
     g = np.random.default_rng(seed)
