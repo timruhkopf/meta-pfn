@@ -1,4 +1,7 @@
 # @package _global_
-# Meta-learning to use B for A despite T/h: end-to-end two-context models
+# Meta-learning to use B for A despite T/h: end-to-end two-context models (issue #12). Pre-registration: notebook 05.
+# One member per model, launched as separate detached runs on ulysses:
+#   task.mode=m0 task.priv=none | dropout | rb      M0, M0 + privileged dropout, M0 + Rao-Blackwellized distillation
+#   task.mode=m3 [task.lupi=0] [task.gn=false]      registration from the identity field (+ ablations)
 defaults:
-  - override /task: ???
+  - override /task: metapfn

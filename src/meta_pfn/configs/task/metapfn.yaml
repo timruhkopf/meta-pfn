@@ -1,0 +1,20 @@
+# End-to-end transfer models (tasks/metapfn.py; issue #12, notebook 05).
+name: metapfn
+mode: m0              # m0 (two-context PFN) | m3 (registration from the identity field, frozen A-only PFN read-out)
+d: 1
+steps: 20000          # fixed step budget (equal across models)
+priv: none            # m0: none | dropout (privileged B_inA tokens w.p. p_priv) | rb (Rao-Blackwellized self-distillation)
+p_priv: 0.3
+p_drop_b: 0.15        # m0: batches without B (the model's own A-only mode)
+lam: 0.5              # m0/rb: weight of the plain sample NLL (1 - lam on the distillation CE)
+lupi: 1.0             # m3: weight of the field loss vs B_inA (0 = no LUPI)
+n_iter: 8             # m3: refinement iterations
+gn: true              # m3: Gauss-Newton direction feature
+pfn_path: runs/regpfn/ckpt/aonly_d1.pt  # frozen A-only PFN (regpfn aonly run, same prior and d)
+lr: 3e-4
+batch: 32
+n_b: 256
+n_test: 64
+n_eval: 128
+device: cuda
+threads: 4

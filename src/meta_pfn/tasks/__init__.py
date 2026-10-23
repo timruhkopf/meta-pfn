@@ -6,6 +6,7 @@ from omegaconf import DictConfig
 
 from ..tracking.sink import Run
 from .headroom import headroom
+from .metapfn import metapfn
 from .outmap import outmap
 from .regpfn import regpfn
 from .sampler_check import sampler_check
@@ -15,6 +16,7 @@ Pipeline = Callable[[DictConfig, Run], float | None]
 
 TASKS: dict[str, Pipeline] = {
     "headroom": headroom,
+    "metapfn": metapfn,
     "outmap": outmap,
     "regpfn": regpfn,
     "sampler_check": sampler_check,
