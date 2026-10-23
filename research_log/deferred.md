@@ -49,6 +49,7 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   used, whose noise relative to task differences is far larger than this prior's.
 - **Pointers.** Log `2026-10-21_headroom.md` §2; `pairs.py::function`.
 - **Status.** open
+- **Status (2026-10-22).** Tracked in issue #7 (noise as a prior variable, PFN retraining, noise-normalized reporting).
 
 ## More dimensions and coupled warps (2026-10-22)
 

@@ -1,0 +1,17 @@
+# E0b outmap (tasks/outmap.py): what B is worth for A when A differs only by a monotone output map g.
+name: outmap
+d: 1
+kind: outmap          # identity | outmap | unrelated (experimental/outmap.py)
+split: 0              # pair seed range: 0 pilot, 1 confirm
+n_pairs: 50
+n_b_by_d: {1: 32, 2: 64}  # B scales with d; n_B + max n_A <= 80, inside pfn_large's n <= 100
+n_a_mult: [0, 1, 2, 4, 8] # n_A grid = these x d
+n_q: 32               # held-out A queries per pair
+family: {log_sd: 0.5} # g = Kumaraswamy CDF, log α, log β ~ N(0, log_sd²)
+p_map: 0.5            # P(g != id) on unrelated pairs (and so in the A-only prior)
+hypothesis_mass: {identity: 1, outmap: 1, unrelated: 1}  # the learner's prior over kinds (normalized)
+grid: 16              # g hypotheses: a grid x grid quantile grid of the family prior
+n_mc_pairs: 10        # pairs re-evaluated with an independently offset grid (Monte-Carlo error)
+pfn: pfn_large
+threads: 16
+chunk: 512

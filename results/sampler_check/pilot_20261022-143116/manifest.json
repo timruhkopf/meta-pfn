@@ -1,0 +1,30 @@
+{
+ "id": "pilot_20261022-143116",
+ "experiment": "sampler_check",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=sampler_check task.d=1,2 task.kind=window,warp task.smc=false",
+ "overrides": [
+  "experiment=sampler_check",
+  "task.d=1,2",
+  "task.kind=window,warp",
+  "task.smc=false"
+ ],
+ "backend": "detached",
+ "commit": "b0b81c7e65aec22f5b32b26d2928c3e8e6d458e9",
+ "branch": "exp/1-headroom",
+ "tag": "sweep/sampler_check/pilot_20261022-143116",
+ "allow_dirty": false,
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-10-22T14:31:16",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 4
+ },
+ "first_start": "2026-10-22T14:31:18",
+ "last_end": "2026-10-22T14:56:16",
+ "wall_h": 0.414,
+ "device_h": 0.0,
+ "snapshot_created": "2026-10-22T14:56:32",
+ "sweep_dir": "runs/sampler_check/pilot_20261022-143116"
+}
