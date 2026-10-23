@@ -31,3 +31,12 @@ with deliverables and open questions.
 - Done: `results/outmap/pilot_20261023-112025` fetched from ulysses (the remote copy moved to runs/_moved_snapshots/);
   notebook 03 uses it for the gate cells; log §3.
 - Verified: 2/2 DONE; the rule gives IMPRECISE with 1 imprecise gate cell (0.030 at d = 1, n_A = 2), down from 5.
+
+### 2026-10-23 12:45 — Phase-1 round 1: back half built and evaluated (branches feat/8-regpfn-arch, exp/9-regpfn-phase1)
+- Mandate (user, 11:30): 1.5 h autonomous; build the back half of the registration architecture and the phase-1 suite
+  (docs/spec_phase1_experiments.md), run it on ulysses, with an architecture branch and an experiment branch.
+- Done: issues #8, #9; commits 551f016 (architecture), c1f9f3d (experiment), 3ef56a5 (analysis), ff4d20b (residual
+  variant); 4 runs + 1 variant on ulysses; notebook 04 executed; RESULTS.md; figures in reports/figures/regpfn/.
+- Verified: 9 regpfn/config tests pass (exactness < 5e-7; field change exactly 0 at n_A = 0, also in the trained model);
+  all 4 runs DONE; E2 curves differ only through coverage, as the spec expects.
+- Results: E3a/E3b FAIL (m* 8–41 of 256); refinement recovers y-, not x-perturbations (log `2026-10-23_regpfn.md` §1).
