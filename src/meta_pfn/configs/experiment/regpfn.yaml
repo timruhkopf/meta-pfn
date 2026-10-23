@@ -1,0 +1,8 @@
+# @package _global_
+# Phase 1 (docs/spec_phase1_experiments.md): references and the back half of the registration model with oracle
+# and perturbed seeds. Pre-registration: notebooks/04_*_regpfn.ipynb. Runs (one member each, in parallel on ulysses):
+#   task.mode=aonly                                   E1 + E2
+#   task.mode=back task.seed_mode=true task.n_iter=0  E3a / E3b
+#   task.mode=back task.seed_mode=perturb task.n_iter=8 and =0   E4 (refinement vs read-out only)
+defaults:
+  - override /task: regpfn
