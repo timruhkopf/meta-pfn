@@ -26,6 +26,14 @@ Observations, Verdict). Issues #8 (architecture, branch `feat/8-regpfn-arch`) an
 - **E4** (n_A = 10): y-perturbations recovered (field error 0.20 → 0.065 in C00 at σ = 0.2, NLL −2.05 vs −1.76
   read-out only); x/shift not (0.20 → 0.19, radius 0); refinement degrades perfect seeds (0 → 0.05–0.07 with T on).
 
+## Update: refinement with explicit residuals and bounded steps (`…-123300`, commit ff4d20b)
+
+At n_A = 10, with an unequal budget (18,300 steps vs 8,500 for read-out only):
+- Perfect seeds are no longer damaged (field error ≤ 0.018), and with a perfect seed it beats read-out only (C00 −2.90 vs −2.65).
+- Lower NLL than read-out only in every (cell, kind, σ).
+- y-perturbations are corrected (0.20 → 0.085–0.106; radius 0.2 in C00, C10).
+- x/shift are not corrected (radius 0); the model hedges with the null slot (w_null up to 0.66).
+
 ## Verdicts (pre-registered rules, drafted by Claude)
 
 E3a **FAIL** (m* < 128), E3b **FAIL** (min m* 7.9–13.7 per cell). E4 is not interpreted (stop rule).
@@ -38,7 +46,8 @@ E3a **FAIL** (m* < 128), E3b **FAIL** (min m* 7.9–13.7 per cell). E4 is not in
    predictive score on A's points (evidence weights).
 3. Refinement fixes y, not x: a position error is visible only through y-mismatch at a few A points. The variant
    with explicit residuals and bounded steps is below.
-4. Train longer (25 min is a short budget), then d = 2.
+4. Position errors need a direction signal: local slopes, or shape matching in the lookup, or the front half (GW landmarks).
+5. Equal-budget runs (the variant had 2× the steps), longer training, then d = 2.
 
 ## Deviations from the spec, and [decide] items (defaults taken, flagged)
 

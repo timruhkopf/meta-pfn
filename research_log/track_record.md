@@ -40,3 +40,7 @@ with deliverables and open questions.
 - Verified: 9 regpfn/config tests pass (exactness < 5e-7; field change exactly 0 at n_A = 0, also in the trained model);
   all 4 runs DONE; E2 curves differ only through coverage, as the spec expects.
 - Results: E3a/E3b FAIL (m* 8–41 of 256); refinement recovers y-, not x-perturbations (log `2026-10-23_regpfn.md` §1).
+
+### 2026-10-23 13:00 — Phase-1 round 1 closed (commit: "Phase-1 update")
+- Verified: the variant run `…-123300` is DONE; the no-evidence check holds; numbers in notebook 04 (Update), RESULTS.md, log §2.
+- Open: equal-budget comparison; a direction signal for position errors; the A-only PFN as the read-out; d = 2.
