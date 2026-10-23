@@ -17,3 +17,6 @@ GAIN_KIND_IS = "final/gain_kind_is"  # + "/n<n_A>": NLL_lower - NLL of the impor
 
 # outmap (E0b)
 GAIN_ORACLE_G = "final/gain_oracle_g"  # + "/n<n_A>": NLL_lower_bayes - NLL_oracle_g (GAIN_BAYES is vs lower_bayes)
+
+# regpfn (phase 1)
+REGPFN_NLL_N5 = "final/nll_n5"  # mean NLL on A's queries at n_A = 5 (no B for aonly; unperturbed seed for back)
