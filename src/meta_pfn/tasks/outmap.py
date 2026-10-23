@@ -2,8 +2,8 @@
 
 One member = one cell (d, kind). n_A and n_B scale with d (`n_a_mult`, `n_b_by_d`). For every pair and n_A
 in the grid, the five predictors of `experimental/outmap.py`, scored by the mean NLL of A's held-out
-queries. A duplicate run with an independently offset g-grid on the first `n_mc_pairs` pairs measures the
-Bayes learner's Monte-Carlo (quadrature) error.
+queries. A duplicate run with independent importance-sampling draws on the first `n_mc_pairs` pairs measures the
+Bayes learner's Monte-Carlo error.
 
 Tables: `nll` (pair, seed, n_a, predictor, nll), `posterior` (pair, n_a, mass of identity / outmap /
 unrelated, ESS of the outmap grid, posterior RMS error of g), `mc` (pair, n_a, bayes NLL of both grids).
@@ -33,21 +33,21 @@ def outmap(cfg: DictConfig, run: Run) -> float:
     mass = {k: float(v) for k, v in OmegaConf.to_container(t.hypothesis_mass).items()}
     grid = [m * t.d for m in t.n_a_mult]
     n_b = int(t.n_b_by_d[t.d])
-    g = torch.Generator().manual_seed(cfg.seed)
-    grid_ab = family.grid(t.grid, 0.5)
-    grid_mc = family.grid(t.grid, float(torch.rand(1, generator=g)))
 
     t0 = time.time()
     pairs = draw_pairs(t.d, t.kind, t.split, t.n_pairs, n_b, max(grid), t.n_q, family, t.p_map)
     nll, post, mc = [], [], []
     for j in range(pairs.P):
-        r = evaluate_pair(pfn, pairs, j, grid_ab, mass, t.p_map, grid, t.chunk)
+        s = pairs.seeds[j]
+        g1 = torch.Generator().manual_seed(cfg.seed * 1_000_003 + s)
+        r = evaluate_pair(pfn, pairs, j, family, mass, t.p_map, grid, t.k_prior, t.k_local, t.rounds, g1, t.chunk)
         for a, n in enumerate(grid):
             for b, name in enumerate(PREDICTORS):
                 nll.append((j, pairs.seeds[j], n, name, r["nll"][a, b]))
             post.append((j, pairs.seeds[j], n, *r["post"][a], r["ess"][a], r["g_err"][a]))
         if j < t.n_mc_pairs:
-            r2 = evaluate_pair(pfn, pairs, j, grid_mc, mass, t.p_map, grid, t.chunk)
+            g2 = torch.Generator().manual_seed((cfg.seed + 1) * 1_000_003 + s)
+            r2 = evaluate_pair(pfn, pairs, j, family, mass, t.p_map, grid, t.k_prior, t.k_local, t.rounds, g2, t.chunk)
             for a, n in enumerate(grid):
                 mc.append((j, pairs.seeds[j], n, r["nll"][a, 4], r2["nll"][a, 4]))
         run.log_metric(M.PAIRS_DONE, float(j + 1), j + 1)

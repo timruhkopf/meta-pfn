@@ -10,8 +10,10 @@ n_q: 32               # held-out A queries per pair
 family: {log_sd: 0.5} # g = Kumaraswamy CDF, log α, log β ~ N(0, log_sd²)
 p_map: 0.5            # P(g != id) on unrelated pairs (and so in the A-only prior)
 hypothesis_mass: {identity: 1, outmap: 1, unrelated: 1}  # the learner's prior over kinds (normalized)
-grid: 16              # g hypotheses: a grid x grid quantile grid of the family prior
-n_mc_pairs: 10        # pairs re-evaluated with an independently offset grid (Monte-Carlo error)
+k_prior: 256          # g: a randomized 16 x 16 quantile grid of the prior (stage 1)
+k_local: 24           # g draws per n_A >= 1 and round, from a Gaussian fitted to the current posterior
+rounds: 4             # adaptive importance-sampling rounds
+n_mc_pairs: 10        # pairs re-evaluated with independent draws (Monte-Carlo error)
 pfn: pfn_large
 threads: 16
 chunk: 512

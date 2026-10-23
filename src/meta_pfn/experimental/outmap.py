@@ -16,8 +16,9 @@ Predictors of A's held-out queries, all with one frozen PFN:
 - `naive`:       PFN(B ∪ A), g = id assumed              pooling without the output map
 - `oracle_g`:    PFN(B ∪ g⁻¹(A)), the true g             relation known (upper bound)
 - `bayes`:       mixture over {B used, B ignored} × {g = id, g_1..K}, each weighted by p(h) times the
-                 PFN chain-rule likelihood of A's points (with the Jacobian). g_1..K is a randomized
-                 quantile grid of the family prior (equal prior mass per point).
+                 PFN chain-rule likelihood of A's points (with the Jacobian). The g draws come from
+                 adaptive multiple importance sampling (`_MapPosterior`): a randomized quantile grid of the
+                 prior, then rounds of local Gaussians fitted per n_A.
 """
 
 from dataclasses import dataclass
@@ -142,36 +143,123 @@ def chain(pfn, xb, yb, xa, ya, xq, yq, ab, use_b: bool, n_grid: list[int], chunk
     return ll, torch.stack(lq)
 
 
+def _log_normal(z: torch.Tensor, m: torch.Tensor, L: torch.Tensor) -> torch.Tensor:
+    """log N(z; m, L Lᵀ) for z [N, 2]."""
+    r = torch.linalg.solve_triangular(L, (z - m).T, upper=False).T
+    return -0.5 * (r**2).sum(1) - torch.log(torch.diagonal(L)).sum() - np.log(2 * np.pi)
+
+
+class _MapPosterior:
+    """Adaptive multiple importance sampling (AMIS) over g within one group (B used or not), in z = log(α, β).
+    Stage 1: a randomized quantile grid of the prior (k_prior points). Then `rounds` rounds: for each n ≥ 1 in
+    the grid, a Gaussian fitted to the current weighted posterior at n (sd inflated x1.5) proposes k_local
+    draws. Every draw is weighted against the mixture of all proposals so far (balance heuristic), so one set
+    of draws serves every n."""
+
+    def __init__(self, family: OutputFamily, k_prior: int, k_local: int, g: torch.Generator):
+        self.family, self.k_prior, self.k_local, self.g = family, k_prior, k_local, g
+        self.props: list[tuple[torch.Tensor, torch.Tensor]] = []
+
+    def prior_logpdf(self, z: torch.Tensor) -> torch.Tensor:
+        s = self.family.log_sd
+        return (-0.5 * (z / s) ** 2 - np.log(s * np.sqrt(2 * np.pi))).sum(1)
+
+    def stage1(self) -> torch.Tensor:
+        k = max(round(self.k_prior**0.5), 1)
+        self.k_prior = k * k
+        return self.family.grid(k, float(torch.rand(1, generator=self.g))).log()
+
+    def propose(self, z: torch.Tensor, ll: torch.Tensor, n_grid: list[int]) -> torch.Tensor:
+        """One AMIS round: new draws [k_local x #(n ≥ 1), 2] from Gaussians fitted at each n."""
+        lr = self.log_weights(z)
+        fitted = []
+        for n in n_grid:
+            if n == 0:
+                continue
+            w = torch.softmax(lr + ll[:, :n].sum(1), 0)
+            m = (w[:, None] * z).sum(0)
+            c = ((z - m).T * w) @ (z - m) + 1e-6 * torch.eye(2)
+            fitted.append((m, torch.linalg.cholesky(2.25 * c)))  # sd x1.5
+        out = [m + torch.randn(self.k_local, 2, generator=self.g) @ L.T for m, L in fitted]
+        self.props += fitted
+        return torch.cat(out) if out else z[:0]
+
+    def log_weights(self, z: torch.Tensor) -> torch.Tensor:
+        """log p(z) - log q_mix(z): the importance ratio of every draw against the mixture of proposals."""
+        lp = self.prior_logpdf(z)
+        comps = [lp + np.log(self.k_prior)] + [_log_normal(z, m, L) + np.log(self.k_local) for m, L in self.props]
+        lq = torch.logsumexp(torch.stack(comps), 0) - np.log(self.k_prior + self.k_local * len(self.props))
+        return lp - lq
+
+
+def _group(pfn, data, use_b: bool, family, k_prior, k_local, rounds, g, n_grid, chunk, extra: torch.Tensor):
+    """-> rows [identity, *extra, map draws...]: ab, ll [H, n_max], lq [len(n_grid), H, Q], log ratio of the map
+    draws [K], and the index where the map draws start."""
+    mp = _MapPosterior(family, k_prior, k_local, g)
+    z = mp.stage1()
+    ab = torch.cat([torch.ones(1, 2), extra, z.exp()])
+    ll, lq = chain(pfn, *data, ab, use_b, n_grid, chunk)
+    s = 1 + len(extra)
+    for _ in range(rounds):
+        zn = mp.propose(z, ll[s:], n_grid)
+        if not len(zn):
+            break
+        lln, lqn = chain(pfn, *data, zn.exp(), use_b, n_grid, chunk)
+        z, ab = torch.cat([z, zn]), torch.cat([ab, zn.exp()])
+        ll, lq = torch.cat([ll, lln]), torch.cat([lq, lqn], 1)
+    return ab, ll, lq, mp.log_weights(z), s
+
+
 @torch.no_grad()
 def evaluate_pair(
-    pfn, pairs: OutPairs, j: int, grid_ab: torch.Tensor, mass: dict[str, float], p_map: float, n_grid, chunk=512
+    pfn,
+    pairs: OutPairs,
+    j: int,
+    family: OutputFamily,
+    mass: dict[str, float],
+    p_map: float,
+    n_grid: list[int],
+    k_prior: int,
+    k_local: int,
+    rounds: int,
+    g: torch.Generator,
+    chunk: int = 512,
 ) -> dict[str, np.ndarray]:
     """-> {"nll": [len(n_grid), 5] mean query NLL of PREDICTORS;
     "post": [len(n_grid), 3] posterior mass of (identity, outmap, unrelated);
-    "ess": [len(n_grid)] ESS within the outmap grid (B used); "g_err": [len(n_grid)] posterior RMS of
-    g(u) - g_true(u) over u ∈ [0, 1] within the outmap grid}."""
-    xb, yb, xa, ya, xq, yq = (t[j] for t in (pairs.XB, pairs.YB, pairs.XA, pairs.YA, pairs.XQ, pairs.YQ))
-    K, one = len(grid_ab), torch.ones(1, 2)
+    "ess": [len(n_grid)] ESS of the importance weights within the outmap group (B used);
+    "g_err": [len(n_grid)] posterior RMS of g(u) - g_true(u) over u ∈ [0, 1] within that group}."""
+    data = tuple(t[j] for t in (pairs.XB, pairs.YB, pairs.XA, pairs.YA, pairs.XQ, pairs.YQ))
     m = {k: v / sum(mass.values()) for k, v in mass.items()}
-    # rows with B: [identity, truth, grid...]; rows without B: [identity, grid...]
-    ab_b = torch.cat([one, pairs.ab[j][None], grid_ab])
-    ab_0 = torch.cat([one, grid_ab])
-    ll_b, lq_b = chain(pfn, xb, yb, xa, ya, xq, yq, ab_b, True, n_grid, chunk)
-    ll_0, lq_0 = chain(pfn, xb, yb, xa, ya, xq, yq, ab_0, False, n_grid, chunk)
-    lp_b = torch.tensor([np.log(m["identity"])] + [np.log(m["outmap"]) - np.log(K)] * K)
-    lp_0 = torch.tensor([np.log(m["unrelated"] * (1 - p_map))] + [np.log(m["unrelated"] * p_map) - np.log(K)] * K)
-    keep_b = torch.ones(len(ab_b), dtype=torch.bool)
-    keep_b[1] = False  # the truth is the oracle, not a hypothesis
+    ab_b, ll_b, lq_b, lr_b, s_b = _group(
+        pfn, data, True, family, k_prior, k_local, rounds, g, n_grid, chunk, pairs.ab[j][None]
+    )
+    _, ll_0, lq_0, lr_0, s_0 = _group(
+        pfn, data, False, family, k_prior, k_local, rounds, g, n_grid, chunk, torch.ones(0, 2)
+    )
+    K_b = len(lr_b)
     u = torch.linspace(0, 1, 101)
-    g_grid, g_true = kum(u, grid_ab), kum(u, pairs.ab[j])
+    g_true = kum(u, pairs.ab[j])
+    g_map = kum(u, ab_b[s_b:])
     nll, post, ess, gerr = [], [], [], []
     for a, n in enumerate(n_grid):
-        lw_b = lp_b + ll_b[keep_b, :n].sum(1)
-        lw_0 = lp_0 + ll_0[:, :n].sum(1)
+        # log weight per hypothesis: kind mass x self-normalized importance ratio (map groups) x likelihood
+        lw_b = torch.cat(
+            [
+                torch.tensor([np.log(m["identity"])]) + ll_b[0, :n].sum(),
+                np.log(m["outmap"]) + lr_b - torch.logsumexp(lr_b, 0) + ll_b[s_b:, :n].sum(1),
+            ]
+        )
+        lw_0 = torch.cat(
+            [
+                torch.tensor([np.log(m["unrelated"] * (1 - p_map))]) + ll_0[0, :n].sum(),
+                np.log(m["unrelated"] * p_map) + lr_0 - torch.logsumexp(lr_0, 0) + ll_0[s_0:, :n].sum(1),
+            ]
+        )
+        lq_bh = torch.cat([lq_b[a, :1], lq_b[a, s_b:]])
         lw = torch.cat([lw_b, lw_0])
         w = lw - torch.logsumexp(lw, 0)
-        lq = torch.cat([lq_b[a][keep_b], lq_0[a]])
-        bayes = torch.logsumexp(w[:, None] + lq, 0)
+        bayes = torch.logsumexp(w[:, None] + torch.cat([lq_bh, lq_0[a]]), 0)
         w0 = lw_0 - torch.logsumexp(lw_0, 0)
         lower_bayes = torch.logsumexp(w0[:, None] + lq_0[a], 0)
         nll.append(
@@ -184,8 +272,8 @@ def evaluate_pair(
             ]
         )
         pw = w.exp()
-        post.append([float(pw[0]), float(pw[1 : K + 1].sum()), float(pw[K + 1 :].sum())])
+        post.append([float(pw[0]), float(pw[1 : K_b + 1].sum()), float(pw[K_b + 1 :].sum())])
         wk = torch.softmax(lw_b[1:], 0)
         ess.append(float(1 / (wk**2).sum()))
-        gerr.append(float((((g_grid - g_true) ** 2).mean(1) * wk).sum().sqrt()))
+        gerr.append(float((((g_map - g_true) ** 2).mean(1) * wk).sum().sqrt()))
     return {"nll": np.asarray(nll), "post": np.asarray(post), "ess": np.asarray(ess), "g_err": np.asarray(gerr)}
