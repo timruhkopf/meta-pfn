@@ -166,6 +166,36 @@ add the normalized y as a second feature (ablation).
 - **Order invariance of the evidence** (M1): average the chain-rule likelihood over a few random orders of A.
 - **Shuffled-B control** at evaluation: same B values at permuted x; any "gain" there is a bug or copy detection.
 
+### 5.7 Option M3 (user design, 2026-10-23): GW landmarks + displacement field
+
+Full note: `docs/design_2026-10-23_gw-landmarks-displacement-field.md`. In short:
+- **Step 0:** encode A and B separately (B is cacheable).
+- **Step 1:** a Gromov–Wasserstein-style coupling π (n_A × N_B) finds a few internally consistent landmark
+  matchings, using only within-task order relations (left/right in x, higher/lower in y).
+- **Step 2:** each matching seeds a slot with a dense displacement field placing every B point in A's frame.
+  There are also an identity slot and a null slot (ignore B).
+- **Step 3:** weight-tied iterative refinement, RAFT/AlphaFold style: look up A's evidence near each B
+  point's current position, propose a correction, smooth it over B neighbours, exchange between slots.
+- **Steps 4–5:** read out per slot, then a mixture Σ_k w_k p_k.
+
+How it relates to the ideas above:
+- **It combines M1 (slots) and M2 (latent coordinates)** and adds a robust initialization. The direction is
+  reversed: the field moves B into A's frame (B_inA), where M2 moves A and the queries into B's.
+- **The order relations are pairwise**, so they hold under any monotone warp or output map. They also don't
+  depend on how densely a region is sampled, unlike within-set ranks. So they should survive acquisition
+  bias better than the x-rank attention ruled out in §4. The design's "within-task y-ranks" feature in
+  step 0 is still density-dependent; it's an ablation.
+- **The null and identity slots** give the in-context prior's mixture over "unrelated / same" for free.
+
+Points to settle when it's built:
+- **LUPI on the field** pulls x̂ toward the true B_inA. That is supervision of the (non-parametric) registration,
+  which §4 asked to avoid. Run M3 with and without it. The without-LUPI variant, plus the Rao-Blackwellized
+  target (§5.2), is the one that fits the weekend constraint.
+- **LUPI on the weights** (cross-entropy to "the right slot") is proper only if slots map to hypotheses
+  identifiably. Otherwise it fights the mixture NLL; ablate it too.
+- **Cost:** O(K · T · N_B) per forward pass; fine at N_B ≤ 64d.
+- **Reference:** Gromov–Wasserstein matching (Mémoli 2011) *(to verify)*.
+
 ## 6. What the weekend should measure
 
 Prior (training and evaluation): f ~ BNN prior; T = per-axis full-box Kumaraswamy bijection
@@ -174,7 +204,8 @@ Prior (training and evaluation): f ~ BNN prior; T = per-axis full-box Kumaraswam
 stratum (A and B separately). d ∈ {1, 2}; n_B = 32d; n_A ∈ {0, d, 2d, 4d, 8d}.
 
 Models at equal size and budget: M0, M0 + privileged dropout, M0 + Rao-Blackwellized self-distillation,
-M1 (slots + evidence), M2 (latent coordinates), and M1 + M2 if time allows.
+M1 (slots + evidence), M2 (latent coordinates), and M3 (GW landmarks + displacement field, §5.7, which
+subsumes M1 + M2), with and without its field/weight LUPI terms.
 
 Read-outs per (stratum, noise, d, n_A):
 - NLL on A's queries; gains vs the same model's A-only; vs the frozen PFN's A-only (marginal check: gains must
