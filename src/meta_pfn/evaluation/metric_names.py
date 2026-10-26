@@ -20,4 +20,5 @@ GAIN_ORACLE_G = "final/gain_oracle_g"  # + "/n<n_A>": NLL_lower_bayes - NLL_orac
 
 # regpfn (phase 1)
 REGPFN_NLL_N5 = "final/nll_n5"  # mean NLL on A's queries at n_A = 5 (no B for aonly; unperturbed seed for back)
+GWONLY_FRAC_N5 = "final/frac_005_n5"  # gwonly: share of covered A points (C10, n_A = 5) with landmark error < 0.05
 METAPFN_GAIN_N5 = "final/gain_n5"  # metapfn: NLL(A-only PFN) - NLL(model) at n_A = 5, mean over the 4 related cells

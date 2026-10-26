@@ -5,6 +5,7 @@ from collections.abc import Callable
 from omegaconf import DictConfig
 
 from ..tracking.sink import Run
+from .gwonly import gwonly
 from .headroom import headroom
 from .metapfn import metapfn
 from .outmap import outmap
@@ -15,6 +16,7 @@ from .toy_regression import toy_regression
 Pipeline = Callable[[DictConfig, Run], float | None]
 
 TASKS: dict[str, Pipeline] = {
+    "gwonly": gwonly,
     "headroom": headroom,
     "metapfn": metapfn,
     "outmap": outmap,
