@@ -1,0 +1,17 @@
+seed: 0
+task.batch: 32
+task.d: 1
+task.device: cuda
+task.lupi: 1.0
+task.max_step: 0.1
+task.minutes: 24
+task.mode: back
+task.n_b: 256
+task.n_eval: 128
+task.n_iter: 8
+task.n_perm: 5
+task.name: regpfn
+task.resid: true
+task.seed_mode: perturb
+task.sig_max: 0.25
+task.threads: 4

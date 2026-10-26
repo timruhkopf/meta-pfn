@@ -1,0 +1,2 @@
+{"member": 0, "overrides": ["experiment=outmap", "task.d=1", "task.kind=outmap", "task.k_prior=1024", "task.k_local=48", "task.device=cuda"]}
+{"member": 1, "overrides": ["experiment=outmap", "task.d=2", "task.kind=outmap", "task.k_prior=1024", "task.k_local=48", "task.device=cuda"]}

@@ -1,0 +1,6 @@
+# @package _global_
+# E0 follow-up: is the low share G on warp pairs the sampler (prior importance sampling collapses) or the
+# data (A's few points don't pin T down)? Pre-registration: notebooks/02_*_sampler_check.ipynb.
+# Sweep: task.d=1,2 task.kind=window,warp
+defaults:
+  - override /task: sampler_check

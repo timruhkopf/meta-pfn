@@ -1,0 +1,14 @@
+# GW-only landmark recovery (tasks/gwonly.py; issue #13, notebook 06).
+name: gwonly
+method: peyre         # peyre (no learning) | unrolled (learned GW iteration) | gru (GRU operator on the logits)
+n_b: 64               # N_B (small scale)
+n_eval: 256           # evaluation pairs per cell
+restarts: 8           # peyre: restarts (0 = uniform init; the rest random logits); best energy = K = 1
+h: 16                 # learned: relation embedding width
+n_iter: 10            # learned: weight-tied iterations
+steps: 6000           # learned: training steps
+batch: 32
+lr: 1e-3
+every: 250            # learned: log training / validation metrics every n steps
+device: cuda
+threads: 4

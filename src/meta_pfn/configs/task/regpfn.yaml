@@ -1,0 +1,17 @@
+# Phase-1 registration experiments (tasks/regpfn.py; docs/spec_phase1_experiments.md).
+name: regpfn
+mode: back            # aonly (E1 + E2) | back (E3 / E4)
+d: 1
+seed_mode: perturb    # back: true (seed = B_inA, E3) | perturb (seed = B_inA + smooth perturbation, E4)
+n_iter: 8             # back: refinement iterations (0 = read-out only)
+sig_max: 0.25         # back/perturb: training perturbation amplitude ~ U[0, sig_max] (x and y each on w.p. 1/2)
+resid: false          # back: feed explicit local residuals (y and x) near x̂ to the refinement GRU
+max_step: null        # back: bound each refinement step to ±max_step (null = unbounded)
+lupi: 1.0             # back: weight of the LUPI field loss
+minutes: 25           # training wall-clock budget
+batch: 32
+n_b: 256              # N_B
+n_eval: 128           # evaluation pairs per cell (fixed, nested in n_A)
+n_perm: 5             # aonly: random B_inA subsets per m
+device: cuda
+threads: 4

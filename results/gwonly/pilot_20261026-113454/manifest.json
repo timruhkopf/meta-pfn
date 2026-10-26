@@ -1,0 +1,28 @@
+{
+ "id": "pilot_20261026-113454",
+ "experiment": "gwonly",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just run detached pilot experiment=gwonly task.method=peyre",
+ "overrides": [
+  "experiment=gwonly",
+  "task.method=peyre"
+ ],
+ "backend": "detached",
+ "commit": "be12707a803d41dcbf5fc40e4ddfd3da13ddc7ab",
+ "branch": "HEAD",
+ "tag": "sweep/gwonly/pilot_20261026-113454",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-10-26T11:34:54",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 1
+ },
+ "first_start": "2026-10-26T11:34:56",
+ "last_end": "2026-10-26T11:35:04",
+ "wall_h": 0.002,
+ "device_h": 0.0,
+ "snapshot_created": "2026-10-26T11:46:31",
+ "sweep_dir": "runs/gwonly/pilot_20261026-113454"
+}

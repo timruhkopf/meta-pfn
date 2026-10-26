@@ -1,0 +1,24 @@
+seed: 0
+task.chunk: 512
+task.family.b_min: 0.4
+task.family.kum_log_sd: 0.5
+task.hypothesis_mass.identity: 0.25
+task.hypothesis_mass.unrelated: 0.25
+task.hypothesis_mass.warp: 0.25
+task.hypothesis_mass.window: 0.25
+task.k: 256
+task.k_by_d.1: 128
+task.k_by_d.2: 256
+task.k_smc: 256
+task.n_a_grid: '[0, 1, 2, 4, 8]'
+task.n_b: 32
+task.n_mc_pairs: 10
+task.n_moves: 3
+task.n_pairs: 16
+task.n_q: 32
+task.name: sampler_check
+task.pfn: pfn_large
+task.rho: 0.0
+task.smc: false
+task.split: 0
+task.threads: 16

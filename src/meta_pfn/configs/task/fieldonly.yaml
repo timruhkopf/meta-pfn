@@ -1,0 +1,15 @@
+# Field-only registration from a random start (tasks/fieldonly.py; issue #14, notebook 07).
+name: fieldonly
+method: gd            # gd (no learning) | operator (phase-1 RegBack refinement) | optimizer (learned, gradient-fed)
+n_b: 64               # N_B (small scale, as notebook 06)
+n_eval: 256           # evaluation pairs per cell
+restarts: 8           # gd: starts for gd_best8 / gd_oracle8 (the first is the shared start)
+gd_steps: 300         # gd: Adam steps (ℓ annealed 0.15 -> 0.02)
+dm: 64                # learned: width
+n_iter: 12            # learned: weight-tied iterations
+steps: 6000           # learned: training steps
+batch: 32
+lr: 1e-3
+every: 250            # learned: log training / validation metrics every n steps
+device: cuda
+threads: 4

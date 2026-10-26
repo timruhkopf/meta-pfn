@@ -1,0 +1,22 @@
+{
+ "id": "pilot_20261023-083513",
+ "experiment": "outmap",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=outmap task.d=1 task.kind=identity,outmap,unrelated",
+ "overrides": [
+  "experiment=outmap",
+  "task.d=1",
+  "task.kind=identity,outmap,unrelated"
+ ],
+ "backend": "detached",
+ "commit": "3d681cb1fa64cc5bc37b6d36aed51869ce4bba95",
+ "branch": "exp/1-headroom",
+ "tag": "sweep/outmap/pilot_20261023-083513",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-10-23T08:35:13",
+ "n_members": 3
+}

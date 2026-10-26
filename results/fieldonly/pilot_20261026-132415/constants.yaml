@@ -1,0 +1,15 @@
+seed: 0
+task.batch: 32
+task.device: cuda
+task.dm: 64
+task.every: 250
+task.gd_steps: 300
+task.lr: 0.001
+task.method: optimizer
+task.n_b: 64
+task.n_eval: 256
+task.n_iter: 12
+task.name: fieldonly
+task.restarts: 8
+task.steps: 6000
+task.threads: 4

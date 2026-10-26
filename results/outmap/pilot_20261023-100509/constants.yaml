@@ -1,0 +1,22 @@
+seed: 0
+task.chunk: 512
+task.d: 2
+task.device: cuda
+task.family.log_sd: 0.5
+task.hypothesis_mass.identity: 1
+task.hypothesis_mass.outmap: 1
+task.hypothesis_mass.unrelated: 1
+task.k_local: 24
+task.k_prior: 256
+task.n_a_mult: '[0, 1, 2, 4, 8]'
+task.n_b_by_d.1: 32
+task.n_b_by_d.2: 64
+task.n_mc_pairs: 10
+task.n_pairs: 50
+task.n_q: 32
+task.name: outmap
+task.p_map: 0.5
+task.pfn: pfn_large
+task.rounds: 4
+task.split: 0
+task.threads: 16

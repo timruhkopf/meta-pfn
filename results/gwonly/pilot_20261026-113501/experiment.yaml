@@ -1,0 +1,5 @@
+# @package _global_
+# GW-only: does order-based GW recover B_inA landmarks? (issue #13). Pre-registration: notebook 06.
+# One member per solver, separate detached runs on ulysses: task.method=peyre | unrolled | gru
+defaults:
+  - override /task: gwonly

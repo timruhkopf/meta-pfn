@@ -1,0 +1,23 @@
+{
+ "id": "pilot_20261021-191753",
+ "experiment": "headroom",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=headroom task.d=1,2 task.kind=identity,window,warp,unrelated task.sigma=0,0.05,0.1",
+ "overrides": [
+  "experiment=headroom",
+  "task.d=1,2",
+  "task.kind=identity,window,warp,unrelated",
+  "task.sigma=0,0.05,0.1"
+ ],
+ "backend": "detached",
+ "commit": "e57e59b41fd9351e4628298dad40fad8fa008316",
+ "branch": "exp/1-headroom",
+ "tag": "sweep/headroom/pilot_20261021-191753",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-10-21T19:17:53",
+ "n_members": 24
+}

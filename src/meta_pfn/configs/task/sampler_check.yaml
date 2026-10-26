@@ -1,0 +1,10 @@
+# E0 follow-up (tasks/sampler_check.py): the pilot's importance-sampling Bayes learner vs an SMC one.
+defaults:
+  - headroom   # same pairs, PFN, grid and the pilot's hypothesis set (kind_is reproduces the pilot)
+  - _self_
+name: sampler_check
+kind: warp            # window | warp; rho is 0
+n_pairs: 16           # the first 16 pilot pairs of the cell (split 0)
+k_smc: 256            # SMC particles per family
+n_moves: 3            # Metropolis moves per resampling
+smc: true             # false: importance-sampling predictors only (lower, oracle_T, bayes_is, kind_is)

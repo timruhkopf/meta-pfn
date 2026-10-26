@@ -22,7 +22,7 @@ Annotated literature for this project. BibTeX for every entry lives in `referenc
 ### [huang2023landscapes] Huang, Li (2023). *On the Hyperparameter Loss Landscapes of Machine Learning Models: An Exploratory Study*. arXiv:2311.14014
 - **Status:** skimmed (to-verify: the exact statistics we calibrate against)
 - **Claim:** Publishes landscape statistics across datasets for HPO of the same model, and finds the landscapes similar across datasets (correlated rankings, overlapping good regions).
-- **Relevance:** motivation and calibration target: how related real B and A are. Our σ grid (Spearman 0.9 / 0.7) is chosen against it.
+- **Relevance:** motivation and calibration target: how related real B and A are. Our ρ grid (relatedness; σ before 2026-10-22) (Spearman 0.9 / 0.7) is chosen against it.
 - **Used in:** `pairs.py`; E0 log §2
 
 ### [snoek2014warping] Snoek, Swersky, Zemel, Adams (2014). *Input Warping for Bayesian Optimization of Non-stationary Functions*. ICML 2014. arXiv:1402.0929

@@ -1,0 +1,18 @@
+# E0 headroom (tasks/headroom.py): what B is worth for A to a Bayes learner, measured with the frozen PFN.
+name: headroom
+d: 1
+kind: window          # identity | window | warp | unrelated (pairs.py)
+rho: 0.0              # relatedness, task.sigma before 2026-10-22: A is a weight-space relative of B (0 = same; 0.05 / 0.1 ~ Spearman 0.9 / 0.7)
+split: 0              # pair seed range (pairs.py::pair_seed): 0 pilot, 1 confirm
+n_pairs: 50
+n_b: 32               # B's points: n_B + n_A <= 40, inside pfn_large's n <= 100
+n_a_grid: [0, 1, 2, 4, 8]
+n_q: 32               # held-out A queries per pair
+family: {b_min: 0.4, kum_log_sd: 0.5}
+hypothesis_mass: {unrelated: 0.25, identity: 0.25, window: 0.25, warp: 0.25}  # the learner's prior over relations
+k: 256                # particles per warp family
+k_by_d: {1: 128, 2: 256}
+n_mc_pairs: 10        # pairs re-evaluated with an independent hypothesis set (Monte-Carlo error)
+pfn: pfn_large
+threads: 16
+chunk: 512

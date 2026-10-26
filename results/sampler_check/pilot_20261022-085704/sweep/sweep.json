@@ -1,0 +1,22 @@
+{
+ "id": "pilot_20261022-085704",
+ "experiment": "sampler_check",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=sampler_check task.d=1,2 task.kind=window,warp",
+ "overrides": [
+  "experiment=sampler_check",
+  "task.d=1,2",
+  "task.kind=window,warp"
+ ],
+ "backend": "detached",
+ "commit": "5270c7f40200be929be38c671b36e624dcae1381",
+ "branch": "exp/1-headroom",
+ "tag": "sweep/sampler_check/pilot_20261022-085704",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-10-22T08:57:04",
+ "n_members": 4
+}

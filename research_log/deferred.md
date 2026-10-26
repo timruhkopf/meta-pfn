@@ -33,6 +33,7 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   say how tasks differ, and its evaluation needs this reference.
 - **Pointers.** Issue #3; log `2026-10-21_headroom.md` (§2 calibration); notebook 01.
 - **Status.** open
+- **Status (2026-10-22).** Tracked in issue #5, with options incl. lifting relatedness into an extra input dimension.
 
 ## Relatedness measured in noise units, not rank correlation (2026-10-22)
 
@@ -48,6 +49,7 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   used, whose noise relative to task differences is far larger than this prior's.
 - **Pointers.** Log `2026-10-21_headroom.md` §2; `pairs.py::function`.
 - **Status.** open
+- **Status (2026-10-22).** Tracked in issue #7 (noise as a prior variable, PFN retraining, noise-normalized reporting).
 
 ## More dimensions and coupled warps (2026-10-22)
 
@@ -57,3 +59,56 @@ append-only like the track record: a later outcome is a dated **Status** line, n
 - **Revisit when.** The SMC reference is validated at d ≤ 2 (sampler_check) and E0 is GO or NARROW.
 - **Pointers.** Notebook 01, limits.
 - **Status.** open
+
+## Acquisition-biased designs for B and A (2026-10-22)
+
+- **Idea.** Draw B's (and A's early) points from a previous optimizer's trajectory instead of uniformly:
+  a real cheap BO policy, or a Boltzmann density ∝ exp(−f/τ) with random τ plus post-hoc log filtering.
+  B then covers its good region densely and the rest thinly, as in a real previous HPO run.
+- **Why deferred.** E0 first has to show that a uniform, dense B is worth anything (#1). If the selection
+  depends only on observed points, it is ignorable for the Bayes posterior; it then matters for amortization
+  (a PFN trained on uniform designs is out of distribution) and for coverage gaps, both E1 concerns.
+  It also rules out architecture ideas that lean on B's or A's x-ranking.
+- **Revisit when.** E1 prior design; it becomes its own GitHub issue then. #3 lists trace-biased B as one stratum.
+- **Pointers.** #3; the project brief (memory, not in git) §4.
+- **Status.** open
+
+## Meta-acquisition: choose queries that disambiguate the relation (2026-10-22)
+
+- **Idea.** Once T (and the output relation) is latent, some query points are worth evaluating mainly
+  because they pin T down, which then makes all of B's data usable at once. An acquisition function should
+  value that, e.g. entropy search over the joint of (x*, T), not only over A's surface. Early in a run, the
+  best query may be the one that identifies the transform; this is likely where the largest gains over
+  standard transfer BO lie.
+- **Why deferred.** It needs a learner whose predictive is honest about T-uncertainty (E0 reference or an E1
+  Meta-PFN) and a BO loop; Phase 0 measures prediction only.
+- **Revisit when.** An E1 model realizes a gain and BO evaluation is designed.
+- **Pointers.** Issue #6; E0 `bayes` / `smc.py` give p(T | D) at small d for a first test.
+- **Status.** open
+
+## K > 1 hypotheses and continuous posteriors over T (2026-10-26)
+
+- **Idea.** Several hypothesis slots (one per distinct GW matching: restarts / local optima of the GW objective,
+  or K learned slot queries as in DETR), refined in parallel with slot exchange, weighted by evidence; later a
+  continuous posterior over T instead of K discrete slots.
+- **Why deferred.** Decision 0003: K = 1 + null first, to avoid slot collapse, slot identifiability (a weight loss
+  needs a DETR-style matching, and with one true T per example only one slot would ever be supervised) and
+  multi-slot training cost before one hypothesis works end to end.
+- **Revisit when.** K = 1 works on C10, and the GW-only experiment shows how often the best GW matching is the
+  wrong mode while a lower-ranked one is right (that rate is K > 1's headroom).
+- **Pointers.** brainstorm §5.3, §5.7, §9; design doc steps 1–3; DETR (Carion et al. 2020, arXiv 2005.12872, to verify).
+- **Status.** open
+- **Status.** withdrawn 2026-10-26 (user): not a scope change. K = 1 and h = id are temporary isolation to test a
+  component on a simpler task (decision 0003, brainstorm §9); K > 1 and h ≠ id remain in scope.
+
+## Output maps h ≠ identity in the registration models (2026-10-26)
+
+- **Idea.** The cells with h on (C01, C11): the field's value part ŷ has to learn h⁻¹ on A's scale.
+- **Why deferred.** Decision 0003: x (position) is the hard part (phase 1: refinement fixes y-errors, not x), so
+  isolate it with h = id. GW's order relations are invariant to strictly increasing h, so the front half is not
+  affected; the value read-out is.
+- **Revisit when.** K = 1 works on C10.
+- **Pointers.** brainstorm §9; notebook 04 E4.
+- **Status.** open
+- **Status.** withdrawn 2026-10-26 (user): not a scope change. K = 1 and h = id are temporary isolation to test a
+  component on a simpler task (decision 0003, brainstorm §9); K > 1 and h ≠ id remain in scope.
