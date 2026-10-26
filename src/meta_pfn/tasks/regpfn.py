@@ -40,6 +40,8 @@ def regpfn(cfg: DictConfig, run: Run) -> float:
             batch=t.batch,
             n_b=t.n_b,
             log=log,
+            resid=t.resid,
+            max_step=t.max_step,
         )
         ev = T.eval_back(model, t.d, dev, t.seed_mode, n_pairs=t.n_eval)
         run.log_table("back_eval", ev)

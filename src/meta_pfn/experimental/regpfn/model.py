@@ -102,15 +102,27 @@ class Readout(nn.Module):
 
 
 class RegBack(nn.Module):
-    def __init__(self, d: int, dm: int = 128, heads: int = 4, layers: int = 3, n_bins: int = 64, n_iter: int = 8):
+    def __init__(
+        self,
+        d: int,
+        dm: int = 128,
+        heads: int = 4,
+        layers: int = 3,
+        n_bins: int = 64,
+        n_iter: int = 8,
+        resid: bool = False,
+        max_step: float | None = None,
+    ):
+        """resid: also feed the kernel-weighted local residuals (mean y_a - ŷ_i, mean x_a - x̂_i near x̂_i) to the
+        GRU; max_step: bound each correction to ±max_step (tanh)."""
         super().__init__()
-        self.d, self.dm, self.n_iter = d, dm, n_iter
+        self.d, self.dm, self.n_iter, self.resid, self.max_step = d, dm, n_iter, resid, max_step
         self.phi = Fourier(d)
         self.bar = BarDistribution(uniform_bin_borders(n_bins))
         self.a_in = nn.Linear(self.phi.out + 1, dm)
         self.b_in = nn.Linear(2 * self.phi.out + 2, dm)
         self.lookup = CrossBlock(dm, heads, init_len=0.05)
-        self.gru = nn.GRUCell(dm + self.phi.out + 1, dm)
+        self.gru = nn.GRUCell(dm + self.phi.out + 1 + (d + 2 if resid else 0), dm)
         self.delta = nn.Sequential(nn.Linear(dm, dm), nn.GELU(), nn.Linear(dm, d + 1))
         nn.init.zeros_(self.delta[-1].weight)
         nn.init.zeros_(self.delta[-1].bias)
@@ -126,7 +138,7 @@ class RegBack(nn.Module):
         h = torch.zeros(B * Nb, self.dm, device=ub.device)
         hist = [(x_hat, y_hat)]
         smooth = torch.softmax(
-            (-sqdist(ub, ub) / (2 * self.log_len_h.exp() ** 2)).masked_fill(~b_mask[:, None, :], float("-inf")),
+            (-sqdist(ub, ub) / (2 * self.log_len_h.exp() ** 2)).masked_fill(~b_mask[:, None, :], -1e9),
             -1,
         )
         e = torch.zeros(B, Nb, device=ub.device)
@@ -134,10 +146,19 @@ class RegBack(nn.Module):
             b_tok = self.b_in(torch.cat([self.phi(ub), yb[..., None], self.phi(x_hat), y_hat[..., None]], -1))
             look = self.lookup(b_tok, a_tok, x_hat, xa, a_mask)
             d2 = sqdist(x_hat, xa)
-            e = (torch.exp(-d2 / (2 * self.log_len_e.exp() ** 2)) * a_mask[:, None, :]).sum(-1)
-            inp = torch.cat([look, self.phi(x_hat), y_hat[..., None]], -1).reshape(B * Nb, -1)
-            h = self.gru(inp, h)
-            delta = torch.tanh(e)[..., None] * self.delta(h).view(B, Nb, -1)
+            k = torch.exp(-d2 / (2 * self.log_len_e.exp() ** 2)) * a_mask[:, None, :]  # [B, Nb, Na]
+            e = k.sum(-1)
+            feats = [look, self.phi(x_hat), y_hat[..., None]]
+            if self.resid:
+                kn = k / e[..., None].clamp_min(1e-6)
+                ry = (kn * (ya[:, None, :] - y_hat[..., None])).sum(-1, keepdim=True)
+                rx = (kn[..., None] * (xa[:, None, :, :] - x_hat[:, :, None, :])).sum(2)
+                feats += [ry, rx, torch.tanh(e)[..., None]]
+            h = self.gru(torch.cat(feats, -1).reshape(B * Nb, -1), h)
+            step = self.delta(h).view(B, Nb, -1)
+            if self.max_step is not None:
+                step = self.max_step * torch.tanh(step)
+            delta = torch.tanh(e)[..., None] * step
             delta = smooth @ delta
             x_hat = x_hat + delta[..., : self.d]
             y_hat = y_hat + delta[..., self.d]
