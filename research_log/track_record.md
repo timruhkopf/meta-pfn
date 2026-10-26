@@ -69,3 +69,12 @@ with deliverables and open questions.
 - Result: NOT USABLE by the drafted rule (C10, n_A = 5: best 0.31 within 0.05; value baseline 0.46). Numbers: log §1.
 - Earlier this session (2026-10-23/26): the weekend runs of #12 never launched (turn stalled after permission denials
   on Friday; no cron was created). Code for #12 is on exp/12-metapfn-weekend, unlaunched.
+
+### 2026-10-26 13:45 — Field-only (issue #14, branch exp/14-fieldonly; session dcc72ec0, after the takeover from 63423c6c)
+- Mandate (user, 13:05): "get the second stage as a stand alone experiment; where we use the operator/optimizer layers
+  on their own without GW and from random initialization. build it, run it and report (standalone) in a notebook".
+- Done: e4422aa (module, task, tests, notebook 07 pre-registration), 249c589 (gd start fix + test, round-1 snapshots);
+  4 sweeps on ulysses (the 1st gd superseded); notebook 07 executed; HTML in reports/ (untracked).
+- Verified: 10 fieldonly tests and the full suite pass (111 passed, 1 skipped before the fix commit); all sweeps DONE.
+- Results: USABLE, just (optimizer 0.555 at C10, n_A = 10); learned beats gd: no; C00 no-harm: fails
+  (log `2026-10-26_fieldonly.md` §1).
