@@ -337,3 +337,94 @@ task plus the grid, on the GPU; streamable. Not built: the residual ("local diff
 as an interpolation of y-surfaces with a second BNN draw (mixture weight) over an extra latent input. Open conflict:
 §4/§6 above asked for full-box bijections (no window shift), while the phase-1 spec (later, user's) puts T on the
 latent domain so shifts move B's window partly outside A's (coverage 0.85 in C10/C11); the code follows the spec.
+
+## 10. Training signals, sharpness, the learned GW layer, normalization and bounds (2026-10-26)
+
+**Order of work (user).** First make the architecture capable of finding *some* good registration (the posterior
+over T, for now its MAP: K = 1); only then add training-signal refinements. K = 1 and h = id are isolation for
+component tests, not scope changes (decision 0003).
+
+**The Rao-Blackwellized target = the LUPI teacher's distillation (user).** The privileged-teacher distillation of
+§5.2 *is* the Rao-Blackwellized target: CE(p(· | D, Z), q(· | D)) with the teacher computing p(· | D, Z). It cannot
+inject a registration capability on its own (it replaces a one-sample target by its conditional expectation: same
+minimizer, lower variance). Once a model registers at all, it should make learning cheaper and more stable.
+→ Add it after the registration components work.
+
+**Label smoothing / more observation noise to ease registration (user's question).** Two different knobs:
+- *More observation noise in the prior* (σ as a prior variable): a proper change of task. The likelihood over T
+  flattens, so a near-miss registration costs little and the loss over field positions gets smoother (wider basins:
+  coarse-to-fine, like annealing). The Bayes answer at high σ also weights null more, so a curriculum σ high → low
+  (σ inferable from the context) is the principled version.
+- *Label smoothing of the bar-distribution target*: changes the loss, not the task (improper unless annealed to 0).
+- Risk of both: if rejecting B is cheap, the model settles in "always null" and the registration gradient vanishes.
+  Mitigations: noise on A's targets but keep B precise (B is dense: it still pins the field's shape); keep a
+  registration gradient that does not pass through the weights (field LUPI, or the JEPA term below); temper the
+  evidence weights (τ) instead of the data; anneal the lookup bandwidth wide → narrow (the architectural form of
+  the same idea).
+
+**JEPA-style latent targets (user's idea).** Pull the model's latents of A_test in the forward [A, B, A_test]
+toward the frozen A-only PFN's latents in the forward [A, B_inA, A_test] (teacher; n = n_A + n_B ≤ 276 is in its
+training range). Reasoning: T is never explicit, it is observed only through p(· | D, Z); a latent target is far
+denser than a scalar NLL sample (or the 64-bin RB target) and guides gradients toward representations that
+generalize. Points to settle:
+- It is feature distillation with privileged inputs (FitNets, Romero et al. 2015, arXiv 1412.6550; I-JEPA,
+  Assran et al. 2023, arXiv 2301.08243; both to verify). The teacher is frozen, so JEPA's collapse problem (EMA
+  targets) does not arise; a small predictor head maps the student's latent space to the teacher's.
+- Which layer: the last pre-head latent is nearly equivalent to matching the PPD (logits are linear in it), so it
+  adds little over RB; intermediate layers carry the denser signal.
+- Bias under posterior uncertainty: regressing to the latent of the *true* registration teaches E[latent | D], an
+  average over T: the averaging failure of §2.2. Fine for MAP / K = 1 with a sharp posterior; with a broad posterior
+  keep the NLL as the anchor and the latent term auxiliary with a decaying weight.
+- In M3 with the frozen-PFN read-out, the student's query latents equal the teacher's exactly when the field equals
+  B_inA. The JEPA term then sends a gradient through the frozen PFN to the field: a *prediction-weighted* field loss
+  that penalizes field errors by how much they change the prediction, instead of the plain |x̂ − T(u)|² of the
+  field LUPI. Possibly the best form of LUPI on the field.
+- Like RB, it does not create the registration capability: the posterior (or MAP) over registrations still needs an
+  architectural component (GW + field). → After registration works.
+
+**E3 / E4 as component tests, assessed.** E3 (oracle seed) tests the read-out alone; with the frozen A-only PFN as
+read-out it passes by construction (it *is* the effective-data curve), so E3 is retired for that read-out. E4
+(smooth perturbations of the oracle) tests the refinement's basin; its weakness is that sines / global shifts are a
+guess at what seed errors look like. Better, once GW-only (#13) has run: replay the *empirical* GW seed errors (the
+field implied by GW's landmarks) as E4's perturbations, so the radius is measured on the errors the front half
+actually makes. With #13 that is the clean isolation: GW scored against B_inA, the field scored from GW-like seeds,
+then the composition.
+
+**The learned GW layer: architecture and math.** Entropic GW (Peyré et al. 2016) with square loss iterates
+π ← Proj_ε(C(π)) with the linearized cost
+  C(π)_ab = Σ_{a',b'} (R_A(a,a') − R_B(b,b'))² π_a'b' = const_a + const_b − 2 [R_A π R_Bᵀ]_ab,
+Proj_ε a Sinkhorn projection onto the marginals. In the **semi-relaxed** form (Vincent-Cuaz et al. 2022, arXiv
+2110.02753, to verify) only A's marginal is constrained, so the projection is a **row softmax**:
+  π_a· ← softmax_b( (2 [R_A π R_Bᵀ]_ab − const_b) / ε ),
+i.e. attention from A's points over B's with second-order logits. The learned layer keeps this structure:
+- *Relations* r_A(a,a') = φ(sign(x_a − x_a'), sign(y_a − y_a')) ∈ R^h, r_B(b,b') = φ(same for B), φ a small MLP
+  (per-axis signs at d > 1). Only order enters: invariant to monotone T and h. Magnitude features (|Δx|, Δ y-rank)
+  add precision but break invariance: an ablation.
+- *Message:* m_{b,a'} = Σ_b' r_B(b,b') π_a'b' (B's relations to a''s current partners; O(N_B² n_A h)).
+- *Logit:* ℓ_ab = Σ_a' ⟨W r_A(a,a'), m_{b,a'}⟩ / √h + u_ab, u_ab a unary term (e.g. a learned similarity of
+  within-task y-quantiles) that breaks the initial symmetry.
+- *Update:* π_a· = softmax_b(ℓ_a· / ε_t), weight-tied over T_GW iterations, ε_t annealed (or learned per step).
+  Reading: a → b gains weight when b's order relations to the B points currently matched to the other A points
+  agree with a's relations to those A points: the consistency check of design step 1.
+- *Landmarks:* per A point the mode of π_a· (a row mean is wrong when the row is bimodal), confidence = the row's
+  mass near the mode. Hypotheses: different initial π or unary terms → different fixed points; K = 1: the fixed
+  point with the lowest GW energy.
+- *Training:* none in GW-only (Peyré's solver with order matrices is the reference). Learned: end to end through
+  field + read-out, optionally a LUPI cross-entropy of π_a· against the neighbourhood of T⁻¹(x_a) (supervises the
+  non-parametric matching, not transform parameters; ablate).
+
+**Per-task normalization vs the BNN ECDF scale.** Different conventions. CLAUDE.md's "y on the BNN prior's ECDF
+scale" is E0's: one global monotone map (the BNN's marginal ECDF) applied identically to every task, as pfn_large
+expects. The phase-1 prior (spec §4.4) maps each task's noise-free function affinely onto [0.1, 0.9] over its own
+window, and its A-only PFN is trained on that, so phase 1 is internally consistent. Cost of per-task min/max: it
+leaks each task's extremes (the optimum sits at exactly 0.1); the affine part of h is absorbed by B's normalization.
+Option: randomize the margins (or normalize from a noisy estimate) to remove the exact-extreme leak. Open; the ECDF
+scale matters again only where pfn_large is the reference.
+
+**Bounds: latent-domain T vs full-box bijections.** Full-box (T(0) = 0, T(1) = 1) pins the boundaries: every pair
+gets two exact landmarks for free (GW would exploit them), and the optimum's position relative to the box is
+constrained: a leak that inflates results. Latent-domain T (spec) moves B's window partly outside A's (coverage
+0.85): B points that land outside A's window carry no value information for A's window, but in real HPO the same
+box over a shifted landscape (e.g. log-LR shifts, catalogue §1) loses that information too; the loss is real, not
+an artefact. Recommendation: keep the spec's latent-domain T (its Kumaraswamy part is already a full-box warp inside
+the window, so both kinds of distortion are present) and report coverage.

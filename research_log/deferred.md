@@ -98,6 +98,8 @@ append-only like the track record: a later outcome is a dated **Status** line, n
   wrong mode while a lower-ranked one is right (that rate is K > 1's headroom).
 - **Pointers.** brainstorm §5.3, §5.7, §9; design doc steps 1–3; DETR (Carion et al. 2020, arXiv 2005.12872, to verify).
 - **Status.** open
+- **Status.** withdrawn 2026-10-26 (user): not a scope change. K = 1 and h = id are temporary isolation to test a
+  component on a simpler task (decision 0003, brainstorm §9); K > 1 and h ≠ id remain in scope.
 
 ## Output maps h ≠ identity in the registration models (2026-10-26)
 
@@ -108,3 +110,5 @@ append-only like the track record: a later outcome is a dated **Status** line, n
 - **Revisit when.** K = 1 works on C10.
 - **Pointers.** brainstorm §9; notebook 04 E4.
 - **Status.** open
+- **Status.** withdrawn 2026-10-26 (user): not a scope change. K = 1 and h = id are temporary isolation to test a
+  component on a simpler task (decision 0003, brainstorm §9); K > 1 and h ≠ id remain in scope.

@@ -25,6 +25,7 @@ Status: accepted, 2026-10-26 (user, in conversation; the scope exception was giv
 ## Consequences
 
 - No slot collapse, slot exchange or slot-identity loss to deal with yet; multimodal posteriors over T are not
-  represented (the null slot hedges). Deferred: K > 1 / continuous hypotheses, h ≠ id (`deferred.md`).
+  represented (the null slot hedges). K > 1 / continuous hypotheses and h ≠ id stay in scope: K = 1 and h = id are
+  isolation for component tests, not a scope change (not deferrals).
 - Numbers from this line are pilots against references from the same prior (A-only PFN, effective-data curve);
   they are not an E0 verdict.
