@@ -223,9 +223,10 @@ def monotone_map(u: torch.Tensor, c: torch.Tensor, theta: torch.Tensor) -> torch
 def gd_fit(xa, ya, b: Batch, x0, steps=300, lr=0.05, K=8, lam=1e-3, every=0):
     """Fit (monotone map, affine values) from the affine start x0 -> (x̂, ŷ, final energy at ℓ_fine, trajectory)."""
     u = b.ub
-    # recover the start's affine (c, a) from two points of x0 (exact for init_field's starts)
-    a0 = ((x0[:, -1, 0] - x0[:, 0, 0]) / (u[:, -1, 0] - u[:, 0, 0]).clamp_min(1e-6)).clamp(0.05, 20)
-    c = (x0[:, 0, 0] - a0 * u[:, 0, 0]).clone().requires_grad_()
+    # recover the start's affine (c, a) by least squares (exact for init_field's starts)
+    du, dx = u[..., 0] - u[..., 0].mean(1, keepdim=True), x0[..., 0] - x0[..., 0].mean(1, keepdim=True)
+    a0 = ((du * dx).sum(1) / du.pow(2).sum(1).clamp_min(1e-12)).clamp(0.05, 20)
+    c = (x0[..., 0].mean(1) - a0 * u[..., 0].mean(1)).clone().requires_grad_()
     theta = _softplus_inv(a0)[:, None].repeat(1, K).clone().requires_grad_()
     al = torch.ones(u.shape[0], device=u.device, requires_grad=True)
     be = torch.zeros(u.shape[0], device=u.device, requires_grad=True)

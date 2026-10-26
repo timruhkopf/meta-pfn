@@ -1,0 +1,21 @@
+{
+ "id": "pilot_20261026-132409",
+ "experiment": "fieldonly",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=fieldonly task.method=operator",
+ "overrides": [
+  "experiment=fieldonly",
+  "task.method=operator"
+ ],
+ "backend": "detached",
+ "commit": "e4422aa1eab1e1b6a9677500fe10b2c49695db3e",
+ "branch": "HEAD",
+ "tag": "sweep/fieldonly/pilot_20261026-132409",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ulysses",
+ "created": "2026-10-26T13:24:09",
+ "n_members": 1
+}

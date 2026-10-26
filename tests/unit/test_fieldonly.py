@@ -33,6 +33,14 @@ def test_monotone_map_starts_affine_and_stays_increasing():
     assert (F.monotone_map(us, c, theta).diff(dim=1) > 0).all()
 
 
+@pytest.mark.parametrize("identity", [False, True])
+def test_gd_starts_at_the_shared_start(identity):
+    b = eval_set(1, "C10", 16, 8, 64, 0, "cpu")
+    x0, _ = F.init_field(b, torch.Generator().manual_seed(1), identity)
+    traj = F.gd_fit(b.xa[:, :5], b.ya[:, :5], b, x0, steps=2, every=1)[3]
+    assert torch.allclose(traj[0][1], x0, atol=1e-5) and torch.allclose(traj[0][2], b.yb)
+
+
 def test_gd_recovers_a_shift_in_c10():
     # a pure shift is in gd's model class: from a start off by the shift it should move most pairs closer
     b = eval_set(1, "C10", 16, 8, 64, 0, "cpu")
