@@ -58,3 +58,14 @@ with deliverables and open questions.
   after checking it is idle (nvidia-smi, ps). Owner of ulysses this weekend: this session; session 0e7b4868's
   heartbeat (cron 55d1d204) stands down when it sees this entry.
 - Scope exception: Meta-PFN training before an E0 GO is user-directed; recorded as decision 0003.
+
+### 2026-10-26 11:55 — GW-only pilot run and analysed (issue #13, branch exp/13-gwonly)
+- Mandate (user, 2026-10-26): test the GW front half in isolation at small scale on ulysses, 1d showcase notebook,
+  training metrics in MLflow, standalone description.
+- Done: experimental/gwonly.py (Peyré semi-relaxed GW, unrolled learned GW, GRU operator on the coupling), pipeline,
+  analysis/gwonly.py, notebook 06 (description written before the run, executed end to end), log 2026-10-26_gwonly.md §1;
+  3 sweeps on ulysses, snapshots results/gwonly/pilot_20261026-{113454,113457,113501}; MLflow synced.
+- Verified: 102 tests pass, ruff clean; 3/3 members DONE; GW gradient vs autograd 4e-6.
+- Result: NOT USABLE by the drafted rule (C10, n_A = 5: best 0.31 within 0.05; value baseline 0.46). Numbers: log §1.
+- Earlier this session (2026-10-23/26): the weekend runs of #12 never launched (turn stalled after permission denials
+  on Friday; no cron was created). Code for #12 is on exp/12-metapfn-weekend, unlaunched.

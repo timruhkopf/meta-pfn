@@ -1,0 +1,14 @@
+seed: 0
+task.batch: 32
+task.device: cuda
+task.every: 250
+task.h: 16
+task.lr: 0.001
+task.method: gru
+task.n_b: 64
+task.n_eval: 256
+task.n_iter: 10
+task.name: gwonly
+task.restarts: 8
+task.steps: 6000
+task.threads: 4
