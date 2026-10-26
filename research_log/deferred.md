@@ -85,3 +85,26 @@ append-only like the track record: a later outcome is a dated **Status** line, n
 - **Revisit when.** An E1 model realizes a gain and BO evaluation is designed.
 - **Pointers.** Issue #6; E0 `bayes` / `smc.py` give p(T | D) at small d for a first test.
 - **Status.** open
+
+## K > 1 hypotheses and continuous posteriors over T (2026-10-26)
+
+- **Idea.** Several hypothesis slots (one per distinct GW matching: restarts / local optima of the GW objective,
+  or K learned slot queries as in DETR), refined in parallel with slot exchange, weighted by evidence; later a
+  continuous posterior over T instead of K discrete slots.
+- **Why deferred.** Decision 0003: K = 1 + null first, to avoid slot collapse, slot identifiability (a weight loss
+  needs a DETR-style matching, and with one true T per example only one slot would ever be supervised) and
+  multi-slot training cost before one hypothesis works end to end.
+- **Revisit when.** K = 1 works on C10, and the GW-only experiment shows how often the best GW matching is the
+  wrong mode while a lower-ranked one is right (that rate is K > 1's headroom).
+- **Pointers.** brainstorm §5.3, §5.7, §9; design doc steps 1–3; DETR (Carion et al. 2020, arXiv 2005.12872, to verify).
+- **Status.** open
+
+## Output maps h ≠ identity in the registration models (2026-10-26)
+
+- **Idea.** The cells with h on (C01, C11): the field's value part ŷ has to learn h⁻¹ on A's scale.
+- **Why deferred.** Decision 0003: x (position) is the hard part (phase 1: refinement fixes y-errors, not x), so
+  isolate it with h = id. GW's order relations are invariant to strictly increasing h, so the front half is not
+  affected; the value read-out is.
+- **Revisit when.** K = 1 works on C10.
+- **Pointers.** brainstorm §9; notebook 04 E4.
+- **Status.** open

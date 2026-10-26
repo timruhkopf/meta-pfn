@@ -241,3 +241,99 @@ PFNs (Müller et al. 2021, arXiv 2112.10510); PFNs4BO (Müller et al. 2023, arXi
 (Locatello et al. 2020, arXiv 2006.15055); LUPI (Vapnik & Vashist 2009, Neural Networks); generalized
 distillation (Lopez-Paz et al. 2016, arXiv 1511.03643); privileged information via heteroscedastic dropout
 (Lambert et al. 2018, arXiv 1805.11614); ICP (Besl & McKay 1992).
+
+## 9. Design discussion, 2026-10-26 (user + Claude; decision 0003)
+
+**M0 is a control, not a candidate.** The user trained the plain two-context PFN many times without it learning
+to use a warped B. Direction: M3, simplified (decision 0003).
+
+**Location and value are separate.** Each B point carries a field (x̂_i, ŷ_i): where it sits in A's frame and its
+value on A's scale (ŷ = h⁻¹(y_B) after normalization). A match pins the displacement at a few B points; smoothing
+with distance-biased attention in B's own frame u spreads it: a shift (constant displacement) is set by one
+landmark, a stretch (linear) by two, a warp by more. Missing from the design: **monotonicity** of the field
+(T is a bijection; a smoothed field can fold). At d = 1, per axis: parameterize x̂ as a cumulative sum of
+positive increments in u.
+
+**K = 1 first** (hypothesis slot = best GW matching, + null, + the identity field as a free fixed slot): no collapse,
+no slot exchange, no slot-identity loss. Cost: a multimodal posterior over T is not represented. **Where K > 1 would
+come from:** hypotheses are *born in GW* (distinct local optima of the non-convex GW objective, from restarts /
+initializations, or K learned slot queries) and only *refined* by the field, which is a local optimizer and cannot
+jump between modes (it can merge two that share a basin; dedup / slot exchange acts there).
+
+**Evidence weights: chain rule, not leave-one-out.** The slot weight should be its marginal likelihood of A,
+Π_i p(y_i | x_i, A_<i, B, slot) (each point used once, exact). Π_i p(y_i | x_i, B, slot) treats A's points as
+independent given B (they share A's function where B doesn't pin it down) and LOO is a pseudo-likelihood (each
+point in n − 1 contexts): both overcount and are overconfident. The PFN makes the chain rule order-dependent:
+average over a few random orders. (The `metapfn` M3 code uses LOO with a learned temperature: a deviation to fix.)
+
+**Testing the components separately against B_inA.**
+- *Back half (field):* phase-1 E3 seeds the field *with* the oracle B_inA: nothing needs to move, so E3 tests the
+  read-out (is a correct field worth its m*?). E4 seeds it with a **smoothly perturbed** oracle: x̂ = T(u) + δ(u),
+  δ a random sum of 3 sines in u (or a global shift), RMS-scaled to σ ∈ {0.02, 0.05, 0.1, 0.2}; ŷ likewise with a
+  smooth function of y. Not i.i.d. noise (smoothing removes that trivially): the perturbation imitates a seed that
+  is coherently wrong, like a GW seed with a misplaced landmark. **Convergence radius** = the largest σ at which
+  refinement cuts the field error by ≥ 50% (n_A = 10). Phase 1: radius 0.2 for y, 0 for x and shift.
+- *Front half (GW), a GW-only experiment:* no training. Per pair, the true partner of A point a is u*_a = T⁻¹(x_a)
+  (from B_inA). Score the coupling π (n_A × N_B): expected landmark error E_π|u − u*_a|, top-1 error, π-mass within
+  ε of u*_a, and for multiple matchings recall@K (some matching has all landmark errors < ε); by n_A, cell, noise.
+  Baselines: identity guess u = x_a, and value-only matching (nearest y in B, ambiguous on level sets).
+- *Interface contract:* GW is good enough when its seed error lies inside the back half's convergence radius.
+  Then compose, and compare with the oracle-seeded result (the gap is the front half's cost).
+
+**Peyré et al. (2016) as the reference solver.** Entropic GW solves min_π Σ (C_A(a,a') − C_B(b,b'))² π_ab π_a'b'
+− ε H(π) by projected mirror-descent / Sinkhorn iterations, with no learning. With C = within-task order relations
+(sign(x − x'), sign(y − y')) it is exactly the step-1 consistency check done by an optimizer. Roles: (1) the GW-only
+experiment runs on it directly (POT, `ot.gromov`), so it measures what order-GW *can* identify before anything is
+learned; (2) a learned GW layer must at least match it; (3) restarts give K distinct optima for K > 1. Needed
+variant: **semi-relaxed** GW (each A point matched, B's marginal free; balanced GW would force every B point to
+be matched, including B points outside A's window). Sign-based order matrices also exclude the mirror solution
+(x → 1 − x) that distance-based GW cannot tell apart.
+
+**"Which B points do my A points match" vs "where does every B point land" are largely the same question** (both
+estimate T); the difference is the job: GW is a global, combinatorial initializer (coarse, robust to large
+displacements, multimodal), the field a local continuous optimizer (precise within its basin), as in
+coarse-to-fine registration or ICP with an initialization.
+
+**h strictly increasing** = a higher value on B always means a higher value on A: the output map preserves ranks;
+B is A's landscape up to a reparameterization of x and a relabelling of y. Then the within-task y-order and the
+x-order (monotone T) are both invariant, and order-GW is unaffected by h. Realism: for related HPO tasks this is the
+idealized part; real pairs have imperfect rank correlation (local differences, interactions, modality changes,
+`docs/hpo_task_distortions.md` §9–10), which this prior puts into the residual (out of scope in phase 1). Near-ties
+(flat regions) and noise flip order relations; that is GW's real failure mode. **h = id first** (decision 0003).
+
+**The operator's GRU.** Per B point, a hidden state across iterations with update gate z (stop moving once
+converged) and memory of past residuals (momentum-like); RAFT's choice. It is per-point: interaction comes only
+from the lookup and the smoothing. Phase 1's x-failure was a missing direction signal in its inputs, not the GRU:
+hence the Gauss–Newton feature −r s / |s|² (r local residual, s local field slope). Alternative: a shared
+transformer block over B tokens per iteration (AlphaFold-style). Open: detach the field between iterations (RAFT).
+
+**What RAFT, AlphaFold and DETR offer, and the gaps.**
+- *RAFT* (Teed & Deng 2020, arXiv 2003.12039, to verify): all-pairs correlation volume + a weight-tied ConvGRU
+  update operator that looks up correlations at the current flow and refines a dense flow field, loss at every
+  iteration. Maps to field / lookup / GRU / per-step LUPI. Gaps: two *dense* images with appearance features vs
+  n_A ≤ 20 scalar observations (the "correlation volume" is nearly empty); h breaks brightness constancy; one
+  flow, no mixture; trained with full ground-truth flow (= field LUPI).
+- *AlphaFold2* (Jumper et al. 2021, doi 10.1038/s41586-021-03819-2, to verify): structure module with shared
+  blocks updating per-residue frames, invariant point attention, recycling, losses on intermediate structures.
+  Gaps: its strength is the pair representation from the MSA (our analogue: the A × B coupling π, not built
+  yet); its invariance group is SE(3), ours monotone warps (infinite-dimensional, no IPA analogue); one structure
+  plus a confidence, not a mixture.
+- *DETR* (Carion et al. 2020, arXiv 2005.12872, to verify): learned object queries (slots) + Hungarian set loss,
+  which settles which slot answers for which target. Maps to K hypothesis slots and to LUPI on the weights.
+  Gap: one true T per example, so a set loss supervises one slot and leaves the others as "no object"; diversity
+  would have to come from the mixture NLL. Slow convergence. Argues for K = 1 first.
+
+**The Rao-Blackwellized target** (§5.2): replace the one-sample PFN loss −log q(y* | D) by CE(p(· | D, Z), q(· | D))
+with privileged Z (B_inA, T, h, noise-free f). Since E_{Z|D} p(· | D, Z) = p(· | D), the minimizer is unchanged and
+the gradient variance is lower (Rao 1945; Blackwell 1947, doi 10.1214/aoms/1177730497, to verify). Who computes
+p(· | D, Z): the frozen PFN on A ∪ B_inA (near exact at the prior's noise) or the model's own privileged mode
+(self-distillation; biased, keep the sample NLL). Related: distillation (Hinton et al. 2015, arXiv 1503.02531),
+generalized distillation / LUPI (Lopez-Paz et al. 2016, arXiv 1511.03643; Vapnik & Vashist 2009), all to verify.
+
+**The prior: where it ended up.** One BNN draw f_A per pair; B = h(f_A(T(u))) + noise with closed-form T (shift ∘
+per-axis scale ∘ Kumaraswamy warp) and h (affine ∘ sinh-arcsinh); per-task normalization on a fixed grid;
+B_inA in closed form (phase-1 spec §4, `experimental/regpfn/prior.py`). Cost: one batched BNN forward pass per
+task plus the grid, on the GPU; streamable. Not built: the residual ("local differences"), which the user preferred
+as an interpolation of y-surfaces with a second BNN draw (mixture weight) over an extra latent input. Open conflict:
+§4/§6 above asked for full-box bijections (no window shift), while the phase-1 spec (later, user's) puts T on the
+latent domain so shifts move B's window partly outside A's (coverage 0.85 in C10/C11); the code follows the spec.
