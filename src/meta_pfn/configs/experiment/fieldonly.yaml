@@ -1,0 +1,6 @@
+# @package _global_
+# Field-only: can the field operator / a learned optimizer register B into A's frame from a random start, without
+# GW? (issue #14). Pre-registration: notebook 07. One member per method, separate detached runs on ulysses:
+# task.method=gd | operator | optimizer
+defaults:
+  - override /task: fieldonly
