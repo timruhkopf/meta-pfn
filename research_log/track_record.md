@@ -44,3 +44,15 @@ with deliverables and open questions.
 ### 2026-10-23 13:00 — Phase-1 round 1 closed (commit: "Phase-1 update")
 - Verified: the variant run `…-123300` is DONE; the no-evidence check holds; numbers in notebook 04 (Update), RESULTS.md, log §2.
 - Open: equal-budget comparison; a direction signal for position errors; the A-only PFN as the read-out; d = 2.
+
+### 2026-10-26 09:16 — Session 0e7b4868 closed (deliverables and open questions)
+- Weekend: no launches by this session. The weekend mandate was taken over by session 63423c6c (issue #12, branches
+  exp/12-metapfn, exp/12-metapfn-weekend, notebook 05); this session's heartbeat (cron 55d1d204) only checked that its
+  mandate entry was present, every 30 min, Fri 16:00 – Mon 09:00, and is now deleted.
+- Deliverables of this session: E0b outmap (notebook 03, log 2026-10-22_outmap.md §1–3; rule verdict IMPRECISE, 1 gate
+  cell at 0.030); sampler_check fix + importance-sampling recompute (rule verdict IMPRECISE); phase-1 round 1 (notebook 04,
+  results/regpfn/RESULTS.md, log 2026-10-23_regpfn.md §1–2; E3a/E3b FAIL, refinement fixes y- not x-perturbations);
+  issues #2 (rewritten), #5, #6, #7, #8, #9; draft PRs #10, #11; docs/brainstorm_2026-10-23_registration.md (+ §5.7 M3).
+- Open: `just decide` for headroom, sampler_check and outmap (the user's call); phase-1 next steps (A-only PFN as the
+  read-out, evidence-based slot weights, equal-budget E4, a direction signal for position errors, d = 2), unless
+  notebook 05 supersedes them.
