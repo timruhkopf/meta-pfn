@@ -1,0 +1,29 @@
+{
+ "id": "pilot_20261028-143711",
+ "experiment": "ladder",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=ladder task.d=1,2 task.n_b=80,200",
+ "overrides": [
+  "experiment=ladder",
+  "task.d=1,2",
+  "task.n_b=80,200"
+ ],
+ "backend": "detached",
+ "commit": "dadc7b34144a285d750f6fd09fd8afae5bb1e47b",
+ "branch": "HEAD",
+ "tag": "sweep/ladder/pilot_20261028-143711",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-10-28T14:37:11",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 4
+ },
+ "first_start": "2026-10-28T14:37:13",
+ "last_end": "2026-10-28T17:22:51",
+ "wall_h": 2.759,
+ "device_h": 0.0,
+ "snapshot_created": "2026-10-28T17:24:22",
+ "sweep_dir": "runs/ladder/pilot_20261028-143711"
+}

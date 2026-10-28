@@ -1,0 +1,18 @@
+seed: 0
+task.chunk: 256
+task.device: cuda
+task.gd_lr: 0.01
+task.gd_starts: 8
+task.gd_steps: 200
+task.gd_tol: 0.1
+task.grid1: 201
+task.grid2: 41
+task.n_a: '[0, 1, 2, 5, 10]'
+task.n_ex: 3
+task.n_pairs: 100
+task.n_q: 50
+task.name: ladder
+task.pfn: pfn_large
+task.s_max: 0.2
+task.split: 0
+task.threads: 4
