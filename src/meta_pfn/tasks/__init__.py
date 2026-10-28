@@ -8,6 +8,7 @@ from ..tracking.sink import Run
 from .fieldonly import fieldonly
 from .gwonly import gwonly
 from .headroom import headroom
+from .ladder import ladder
 from .metapfn import metapfn
 from .outmap import outmap
 from .regpfn import regpfn
@@ -20,6 +21,7 @@ TASKS: dict[str, Pipeline] = {
     "fieldonly": fieldonly,
     "gwonly": gwonly,
     "headroom": headroom,
+    "ladder": ladder,
     "metapfn": metapfn,
     "outmap": outmap,
     "regpfn": regpfn,

@@ -1,0 +1,19 @@
+# Sanity ladder S0/S1 of the A→B query architecture (tasks/ladder.py; issue #16, notebook 08).
+name: ladder
+pfn: pfn_large        # the frozen variable-d checkpoint (pfn-repro v0.1.0), trained on contexts n <= 100
+d: 1                  # 1 | 2
+n_b: 80               # N_B: N_B + max n_A = 90 <= 100; 200 = the design note's value, outside the training range
+n_pairs: 100          # pairs per stratum (shift, identity, unrelated)
+n_a: [0, 1, 2, 5, 10] # A's train sizes (nested prefixes)
+n_q: 50               # held-out A queries per pair
+s_max: 0.2            # s ~ U(-s_max, s_max)^d
+grid1: 201            # S1 grid over s, d = 1
+grid2: 41             # S1 grid per axis, d = 2 (41^2 = 1681)
+gd_steps: 200         # S1 gradient descent on s from 0 (Adam)
+gd_lr: 0.01
+gd_tol: 0.1           # GD succeeds if its pseudo log-lik is within gd_tol nats of the grid MAP's
+n_ex: 3               # example pairs per stratum stored for the notebook's figures
+split: 0              # 0 pilot, 1 confirm (never tune on 1)
+chunk: 256            # contexts per PFN forward
+device: cuda
+threads: 4

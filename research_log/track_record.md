@@ -78,3 +78,13 @@ with deliverables and open questions.
 - Verified: 10 fieldonly tests and the full suite pass (111 passed, 1 skipped before the fix commit); all sweeps DONE.
 - Results: USABLE, just (optimizer 0.555 at C10, n_A = 10); learned beats gd: no; C00 no-harm: fails
   (log `2026-10-26_fieldonly.md` §1).
+
+### 2026-10-28 13:45 — Sanity ladder S0/S1 for the A→B query architecture (issue #16, branch exp/16-ladder-s0s1)
+- Mandate (user, 2026-10-28): new clean branch; read the design note `metapfn_A_to_B_architecture (1).md` and put it
+  into the logs (docs/design_2026-10-28_A_to_B_architecture.md, with the pasted Q&A as appendix A); prepare and run S0
+  and S1 of its §8 ladder with the pfn-repro variable-d checkpoint (pfn_large), on ulysses; report with a notebook with
+  visualizations.
+- Branch from origin/exp/14-fieldonly (the tip of the unmerged stack; main has only the template). Experiment `ladder`,
+  notebook 08, description and drafted GO / NO-GO written before the first run.
+- Deviation: N_B = 80 (pfn_large's n <= 100) instead of the note's 200; 200 runs as an out-of-range probe.
+- Launches: ulysses (idle at 13:30), sweep task.d=1,2 x task.n_b=80,200, pilot stage.
