@@ -120,7 +120,8 @@ def n_modes(w: np.ndarray, d: int) -> int:
 
 
 def post_stats(lw: torch.Tensor, grid: torch.Tensor, s: torch.Tensor) -> dict:
-    """Posterior summaries from unnormalized log weights lw [G]."""
+    """Posterior summaries from unnormalized log weights lw [G] (float64: sharp posteriors underflow in float32)."""
+    lw, grid, s = lw.double(), grid.double(), s.double()
     w = (lw - torch.logsumexp(lw, 0)).exp()
     G = len(w)
     mean = (w[:, None] * grid).sum(0)
@@ -131,7 +132,7 @@ def post_stats(lw: torch.Tensor, grid: torch.Tensor, s: torch.Tensor) -> dict:
         "err_map": float((grid[m] - s).norm()),
         "err_mean": float((mean - s).norm()),
         "post_sd": float((w * ((grid - mean) ** 2).sum(1)).sum().sqrt()),
-        "entropy": float(-(w * w.clamp_min(1e-300).log()).sum() / np.log(G)),
+        "entropy": float(-torch.special.xlogy(w, w).sum() / np.log(G)),
         "n_modes": n_modes(wn, grid.shape[1]),
         "mass_true": float(w[((grid - s).abs().max(1).values <= NEAR)].sum()),
         "w_map": float(w[m]),
@@ -198,14 +199,22 @@ def evaluate_pair(pfn, p: ShiftPair, grid: torch.Tensor, n_grid: list[int], chun
     return {"nll": rows, "post": prow, "lw": lws, "ll_pseudo": ll_p, "n_b_in_a": int(keep.sum())}
 
 
-def gd_shift(pfn, p: ShiftPair, n_list: list[int], s_max: float, steps: int, lr: float, dev, every: int = 0):
-    """Adam on s from 0 through Q_B, maximizing the pseudo log-likelihood of A's first n points (one run per n,
-    batched). -> (s_gd [len(n_list), d], ll_gd [len(n_list)], trajectory [steps // every, len(n_list), d] or None)."""
+def gd_shift(
+    pfn, p: ShiftPair, n_list: list[int], s_max: float, steps: int, lr: float, dev, every: int = 0,
+    starts: torch.Tensor | None = None,
+):  # fmt: skip
+    """Adam on s through Q_B, maximizing the pseudo log-likelihood of A's first n points, from each start (default
+    s = 0; one run per (n, start), batched). -> (s_gd [len(n_list), K, d], ll_gd [len(n_list), K],
+    trajectory [steps // every, len(n_list), K, d] or None)."""
     xb, yb, xa, ya = (t.to(dev) for t in (p.xb, p.yb, p.xa, p.ya))
     kv, nf = _kv(pfn, xb, yb)
-    L, n_max, d = len(n_list), len(xa), xa.shape[1]
-    mask = (torch.arange(n_max, device=dev)[None] < torch.tensor(n_list, device=dev)[:, None]).float()
-    s = torch.zeros(L, d, device=dev, requires_grad=True)
+    n_max, d = len(xa), xa.shape[1]
+    st = (torch.zeros(1, d) if starts is None else starts).to(dev)
+    K = len(st)
+    L = len(n_list) * K
+    n_rows = torch.tensor(n_list, device=dev).repeat_interleave(K)
+    mask = (torch.arange(n_max, device=dev)[None] < n_rows[:, None]).float()
+    s = st.repeat(len(n_list), 1).clone().requires_grad_(True)
     opt = torch.optim.Adam([s], lr=lr)
     traj = []
 
@@ -222,8 +231,10 @@ def gd_shift(pfn, p: ShiftPair, n_list: list[int], s_max: float, steps: int, lr:
             s.clamp_(-s_max, s_max)
         if every and t % every == 0:
             traj.append(s.detach().cpu().clone())
+    shape = (len(n_list), K)
     with torch.no_grad():
-        return s.detach().cpu(), ll(s).cpu(), (torch.stack(traj) if traj else None)
+        tr = torch.stack(traj).reshape(-1, *shape, d) if traj else None
+        return s.detach().cpu().reshape(*shape, d), ll(s).cpu().reshape(shape), tr
 
 
 @torch.no_grad()

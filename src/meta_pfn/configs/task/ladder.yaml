@@ -11,6 +11,7 @@ grid1: 201            # S1 grid over s, d = 1
 grid2: 41             # S1 grid per axis, d = 2 (41^2 = 1681)
 gd_steps: 200         # S1 gradient descent on s from 0 (Adam)
 gd_lr: 0.01
+gd_starts: 8          # GD starts: s = 0 (the pre-registered one) + 7 uniform in the prior box; best by log-lik
 gd_tol: 0.1           # GD succeeds if its pseudo log-lik is within gd_tol nats of the grid MAP's
 n_ex: 3               # example pairs per stratum stored for the notebook's figures
 split: 0              # 0 pilot, 1 confirm (never tune on 1)

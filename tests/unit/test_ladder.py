@@ -52,4 +52,12 @@ def test_gd_moves_toward_higher_likelihood(pfn) -> None:
     p = L.draw_pair(1, "shift", 0, 1, 12, 5, 4, 0.2)
     _, ll, traj = L.gd_shift(pfn, p, [5], 0.2, steps=30, lr=0.01, dev="cpu", every=10)
     _, ll0, _ = L.gd_shift(pfn, p, [5], 0.2, steps=0, lr=0.01, dev="cpu")
-    assert float(ll[0]) >= float(ll0[0]) - 1e-4 and traj is not None and traj.shape == (3, 1, 1)
+    assert float(ll[0]) >= float(ll0[0]) - 1e-4 and traj is not None and traj.shape == (3, 1, 1, 1)
+
+
+def test_post_stats_are_finite_for_sharp_posteriors() -> None:
+    grid = L.shift_grid(1, 0.2, 201, 5)
+    lw = torch.full((201,), -1e4)
+    lw[37] = 0.0
+    st = L.post_stats(lw, grid, grid[37])
+    assert st["entropy"] == pytest.approx(0.0, abs=1e-9) and st["n_modes"] == 1 and st["err_map"] == 0.0

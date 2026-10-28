@@ -38,15 +38,23 @@ def ladder(cfg: DictConfig, run: Run) -> float:
             tabs["nll"] += [key | row for row in r["nll"]]
             tabs["post"] += [key | {"n_b_in_a": r["n_b_in_a"]} | row for row in r["post"]]
             ex = i < t.n_ex
-            s_gd, ll_gd, traj = L.gd_shift(pfn, p, n_gd, t.s_max, t.gd_steps, t.gd_lr, dev, every=10 if ex else 0)
+            g0 = torch.Generator().manual_seed(p.seed + 5)
+            starts = torch.cat(
+                [torch.zeros(1, t.d), (2 * torch.rand(t.gd_starts - 1, t.d, generator=g0) - 1) * t.s_max]
+            )
+            s_gd, ll_gd, traj = L.gd_shift(
+                pfn, p, n_gd, t.s_max, t.gd_steps, t.gd_lr, dev, every=10 if ex else 0, starts=starts
+            )
             for j, n in enumerate(n_gd):
                 llp = r["ll_pseudo"][:, :n].sum(1)
                 m = int(llp.argmax())
-                tabs["gd"].append(key | {
-                    "n_a": n, "s_gd": s_gd[j].tolist(), "ll_gd": float(ll_gd[j]), "ll_map": float(llp[m]),
-                    "err_true": float((s_gd[j] - p.s).norm()), "err_map": float((s_gd[j] - grid[m].cpu()).norm()),
-                    "success": bool(ll_gd[j] >= llp[m] - t.gd_tol),
-                })  # fmt: skip
+                for start, k in (("zero", 0), (f"best{t.gd_starts}", int(ll_gd[j].argmax()))):
+                    tabs["gd"].append(key | {
+                        "n_a": n, "start": start, "s_gd": s_gd[j, k].tolist(), "ll_gd": float(ll_gd[j, k]),
+                        "ll_map": float(llp[m]), "err_true": float((s_gd[j, k] - p.s).norm()),
+                        "err_map": float((s_gd[j, k] - grid[m].cpu()).norm()),
+                        "success": bool(ll_gd[j, k] >= llp[m] - t.gd_tol),
+                    })  # fmt: skip
             if ex:
                 g = grid.cpu().numpy()
                 for (meth, n), lw in r["lw"].items():
@@ -56,7 +64,7 @@ def ladder(cfg: DictConfig, run: Run) -> float:
                     )
                 for step, sv in enumerate(traj if traj is not None else []):
                     for j, n in enumerate(n_gd):
-                        tabs["ex_gd"].append(key | {"step": step * 10, "n_a": n, "s": sv[j].tolist()})
+                        tabs["ex_gd"].append(key | {"step": step * 10, "n_a": n, "s": sv[j, 0].tolist()})
                 pts = [("B", p.xb, p.yb), ("A", p.xa, p.ya), ("Q", p.xq, p.yq)]
                 tabs["ex_points"].append(pd.concat([pd.DataFrame({"kind": kind, "pair": i, "set": nm, "y": y.numpy(),
                                                                   **{f"x{k}": x[:, k].numpy() for k in range(t.d)}})
