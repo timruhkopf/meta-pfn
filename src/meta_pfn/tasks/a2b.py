@@ -25,6 +25,7 @@ VARIANTS = {  # task.variant -> overrides of the task config
     "nosup": {"sup": "none"},  # NLL only, no LUPI teacher
     "context": {"predictive": "context"},  # last step: PFN re-encoded on B ∪ A_inB per particle
     "jepa": {"lat_w": 1.0},  # + latent LUPI: hidden states at T_k(x*) toward the privileged context's at T(x*)
+    "gd": {"move": "gd"},  # no learned move: fixed gradient-ascent steps on θ from the same starts (baseline)
 }
 
 
@@ -36,7 +37,7 @@ def a2b(cfg: DictConfig, run: Run) -> float:
     pfn = load(t.pfn, device=dev)[0].eval()
     pc = PriorCfg(d=t.d, t_sd=t.t_sd, h_kind=t.h_kind, e_min=t.e_min, h_sd=t.h_sd)
     model = A2B(pfn, t.d, D=t.dm, M=t.m, K=t.k, R=t.r, learn_h=t.h_kind != "id", J=t.j, predictive=t.predictive,
-                null=t.null_particle)  # fmt: skip
+                null=t.null_particle, tj=t.tj, t_sd=t.t_sd, move=t.move, max_step=t.max_step)  # fmt: skip
     model = model.to(dev)
     t0 = time.time()
     hist = T.train(

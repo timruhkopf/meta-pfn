@@ -12,10 +12,13 @@ n_a_max: 10           # training n_A ~ U{0..n_a_max}
 dm: 128               # model width
 m: 16                 # Perceiver latents
 k: 8                  # particles
-r: 4                  # weight-tied evidence blocks (0 = init only: Perceiver + A-encoder + learned queries)
+r: 6                  # weight-tied evidence blocks + θ steps (0 = init only: starts + learned offset)
 j: 16                 # pieces of the monotone h_k (S4)
+tj: 8                 # knots per dimension of the transform state θ_k
+move: learned         # learned (gradient-seeded learned optimizer) | gd (fixed gradient steps)
+max_step: 0.3         # bound on a θ step (logit units)
 predictive: pseudo    # pseudo (B only) | context (last step: PFN re-encoded on B ∪ A_inB per particle)
-variant: full         # full | r0 | k1 | nosup | context | jepa (tasks/a2b.py VARIANTS)
+variant: full         # full | r0 | k1 | nosup | context | jepa | gd (tasks/a2b.py VARIANTS)
 sup: lupi             # lupi (NLL + distillation from the privileged teacher) | none (NLL only)
 null_particle: true   # the null particle (A-only PFN) competes in the mixture
 sup_w: 1.0

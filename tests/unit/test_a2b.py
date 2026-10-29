@@ -44,15 +44,27 @@ def test_monotone_h_starts_at_the_identity() -> None:
     assert float(lj.detach().abs().max()) < 1e-2
 
 
-def test_model_starts_at_the_oracle_on_identity_pairs(pfn) -> None:
+def test_particle_zero_starts_at_the_oracle_on_identity_pairs(pfn) -> None:
+    """Particle 0 starts at the identity (the others at prior draws): on identity pairs it is the oracle particle."""
     inst = PairPrior(PriorCfg(d=1), 4, 2, "cpu").sample("identity", 5, 6, 12)
-    model = A2B(pfn, 1, D=32, M=4, K=3, R=1, null=False)
+    model = A2B(pfn, 1, D=32, M=4, K=3, R=1, null=False).eval()
     outs = model(inst.xb, inst.yb, inst.xa, inst.ya, inst.xq, inst.yq)
     torch.testing.assert_close(outs[0]["ta"][:, 0], inst.xa, atol=1e-4, rtol=0)
     kv, nf, _ = model.qb.encode(inst.xb, inst.yb)
     torch.testing.assert_close(
-        mixture_lp(outs[0]), oracle_lp(model.qb, kv, nf, inst, inst.xq, inst.yq), atol=2e-3, rtol=0
+        outs[0]["lq"][:, 0], oracle_lp(model.qb, kv, nf, inst, inst.xq, inst.yq), atol=1e-3, rtol=0
     )
+    assert torch.isfinite(mixture_lp(outs[-1])).all()
+
+
+def test_gd_move_increases_the_pseudo_likelihood(pfn) -> None:
+    """With the fixed gradient step (no learning), the particles' summed pseudo-log-likelihood goes up."""
+    inst = PairPrior(PriorCfg(d=1), 8, 5, "cpu").sample("warp", 6, 4, 16)
+    model = A2B(pfn, 1, D=32, M=4, K=4, R=4, null=False, move="gd", max_step=0.1).eval()
+    with torch.no_grad():
+        outs = model(inst.xb, inst.yb, inst.xa, inst.ya, inst.xq, inst.yq)
+    lam = torch.stack([o["lam"].sum(-1).mean() for o in outs])
+    assert float(lam[-1]) > float(lam[0])
 
 
 def test_interpolated_density_matches_bar_distribution_at_centres(pfn) -> None:

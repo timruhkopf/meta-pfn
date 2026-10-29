@@ -7,11 +7,15 @@ Learned side:
 - Perceiver over B's tokens (γ(x_b), y_b, frozen PFN state) -> Z_B [M, D];
 - A-encoder (2 self-attention layers over (γ(x_a), y_a)) and a sink token;
 - K particle tokens, DETR-style init: learned queries read Z_B, then A, then each other;
-- decoders: T_k(x) = σ(logit(x) + Δ(γ(x), P_k)) (a residual field, identity at init); with `learn_h`, a monotone knot
-  map h_k on y (J pieces, h(0) and h(1) free, identity at init);
-- R weight-tied evidence blocks: query B at T_k(x_a), push through h_k, log-likelihood λ_ka and PIT; evidence tokens
-  E_ka; self-attention within a particle, lookup into Z_B, particle update; explicit weights
-  log w_k = prior_head(P_k) + Σ_a λ_ka (no tempering);
+- an explicit transform state per particle, θ_k [d, TJ]: T_k(x) = σ(logit(x) + δ_k(x)), δ_k piecewise linear in x
+  with TJ knots per dimension. Particle 0 starts at the identity, the others at transforms drawn from the prior
+  (Kumaraswamy, projected onto the knots), plus a learned offset from the init block (zero at init). θ_k is never
+  supervised; it is the particle's working memory. With `learn_h`, a monotone knot map h_k on y (identity at init);
+- R weight-tied evidence blocks: query B at T_k(x_a), push through h_k, log-likelihood λ_ka, PIT and the likelihood
+  gradient ∂λ_ka/∂T_k(x_a) (RMS-normalized); evidence tokens E_ka; self-attention within a particle, lookup into Z_B,
+  particle update; then a bounded step on θ_k: max_step · tanh(gain · ĝ_k + MLP(P_k, ĝ_k, θ_k)), ĝ_k = ∂Σ_a λ_ka/∂θ_k
+  RMS-normalized (a learned optimizer seeded as gradient ascent, as the gradient-fed optimizer of #14; `move = gd`
+  keeps only the gradient term, fixed gain); explicit weights log w_k = prior_head(P_k) + Σ_a λ_ka (no tempering);
 - prediction per particle: h_k pushed through Q_B(T_k(x*)) (`pseudo`), or, at the last step, the PFN re-encoded on
   B ∪ (T_k(x_a), h_k⁻¹(y_a)) and queried at T_k(x*) (`context`: A's evidence enters B's context); Bayes mixture over k.
 Densities on A's scale use change of variables, p_A(y) = p_B(h⁻¹(y)) |(h⁻¹)'(y)|, mixed with ε·Unif for robustness.
@@ -156,7 +160,8 @@ class MonotoneH(nn.Module):
 
 class A2B(nn.Module):
     def __init__(self, pfn, d: int, D: int = 128, M: int = 16, K: int = 8, R: int = 4, learn_h: bool = False,
-                 J: int = 16, predictive: str = "pseudo", null: bool = True):  # fmt: skip
+                 J: int = 16, predictive: str = "pseudo", null: bool = True, tj: int = 8, t_sd: float = 0.5,
+                 move: str = "learned", max_step: float = 0.3):  # fmt: skip
         super().__init__()
         self._qb = [FrozenQB(pfn)]  # a list: keeps the frozen PFN out of state_dict and the optimizer
         self.d, self.D, self.K, self.R, self.learn_h, self.predictive = d, D, K, R, learn_h, predictive
@@ -169,12 +174,16 @@ class A2B(nn.Module):
         self.sink = nn.Parameter(torch.randn(1, 1, D) * 0.02)
         self.q0 = nn.Parameter(torch.randn(K, D) * 0.02)
         self.init_b, self.init_a, self.init_p = Block(D), Block(D), Block(D)
-        self.t_dec = nn.Sequential(nn.Linear(gx + D, D), nn.GELU(), nn.Linear(D, D), nn.GELU())
-        self.t_out = nn.Linear(D, d)
-        nn.init.zeros_(self.t_out.weight)
-        nn.init.zeros_(self.t_out.bias)
+        self.tj, self.t_sd, self.move, self.max_step = tj, t_sd, move, max_step
+        self.t_init = nn.Linear(D, d * tj)  # learned offset of the starts (zero at init)
+        nn.init.zeros_(self.t_init.weight)
+        nn.init.zeros_(self.t_init.bias)
+        self.step_net = nn.Sequential(nn.Linear(D + 2 * d * tj, D), nn.GELU(), nn.Linear(D, d * tj))
+        nn.init.zeros_(self.step_net[-1].weight)
+        nn.init.zeros_(self.step_net[-1].bias)
+        self.gain = nn.Parameter(torch.ones(()), requires_grad=move == "learned")
         self.h_dec = MonotoneH(D, J) if learn_h else None
-        self.ev_in = nn.Sequential(nn.Linear(2 * gx + gy + DB + 2, D), nn.GELU(), nn.Linear(D, D))
+        self.ev_in = nn.Sequential(nn.Linear(2 * gx + gy + DB + 2 + d, D), nn.GELU(), nn.Linear(D, D))
         self.ev_self, self.ev_look, self.p_read, self.p_self = Block(D), Block(D), Block(D), Block(D)
         self.prior_head = nn.Linear(D, 1)
         self.null = null
@@ -185,14 +194,31 @@ class A2B(nn.Module):
     def qb(self) -> FrozenQB:
         return self._qb[0]
 
-    def T(self, P, x):
-        """P [B, K, D], x [B, M, d] -> T_k(x) [B, K, M, d]."""
-        B, K, _ = P.shape
-        xe = x[:, None].expand(B, K, -1, -1)
-        g = fourier(xe)
-        delta = self.t_out(self.t_dec(torch.cat([g, P[:, :, None].expand(-1, -1, x.shape[1], -1)], -1)))
-        xc = xe.clamp(1e-4, 1 - 1e-4)
+    def T(self, theta, x):
+        """theta [B, K, d, TJ], x [B, M, d] -> T_k(x) = σ(logit x + δ_k(x)) [B, K, M, d], δ_k piecewise linear."""
+        B, K, d, tj = theta.shape
+        M = x.shape[1]
+        pos = x.clamp(0, 1) * (tj - 1)
+        i0 = pos.floor().long().clamp(max=tj - 2)
+        fr = (pos - i0)[:, None]  # [B, 1, M, d]
+        th = theta[:, :, None].expand(B, K, M, d, tj)
+        idx = i0[:, None, :, :, None].expand(B, K, M, d, 1)
+        delta = th.gather(-1, idx)[..., 0] * (1 - fr) + th.gather(-1, idx + 1)[..., 0] * fr
+        xc = x.clamp(1e-4, 1 - 1e-4)[:, None]
         return torch.sigmoid(torch.log(xc) - torch.log1p(-xc) + delta)
+
+    def starts(self, B: int, device) -> torch.Tensor:
+        """θ⁰ [B, K, d, TJ]: particle 0 = identity, the others = prior draws (Kumaraswamy on the knots).
+        Deterministic in eval mode."""
+        K, d, tj = self.K, self.d, self.tj
+        g = torch.Generator(device=device).manual_seed(int(torch.randint(1 << 30, ())) if self.training else 1234)
+        ab = (torch.randn(2, B, K, d, 1, device=device, generator=g) * self.t_sd).exp()
+        xs = torch.linspace(1e-3, 1 - 1e-3, tj, device=device)
+        t = 1 - (1 - xs ** ab[0]) ** ab[1]
+        t = t.clamp(1e-4, 1 - 1e-4)
+        th = torch.log(t) - torch.log1p(-t) - (torch.log(xs) - torch.log1p(-xs))
+        th[:, 0] = 0.0
+        return th
 
     def h_inv(self, P, y):
         """y [B, M] -> (u [B, K, M], logjac [B, K, M])."""
@@ -244,6 +270,7 @@ class A2B(nn.Module):
         P = self.init_b(P, Z)
         P = self.init_a(P, torch.cat([H, sink], 1))
         P = self.init_p(P)
+        theta = self.starts(B, xb.device) + self.t_init(P).view(B, K, d, self.tj)
         kvK = [(k.repeat_interleave(K, 0), v.repeat_interleave(K, 0)) for k, v in kv]
         nfK = nf.repeat_interleave(K, 0)
 
@@ -254,7 +281,7 @@ class A2B(nn.Module):
         null = self.null_particle(xa, ya, xq, yq) if self.null else None
         out = []
         for r in range(R + 1):
-            ta, tq = self.T(P, xa), self.T(P, xq)
+            ta, tq = self.T(theta, xa), self.T(theta, xq)
             if n:
                 lg_a, hd_a = q_b(ta)
                 ua, lja = self.h_inv(P, ya)
@@ -273,17 +300,18 @@ class A2B(nn.Module):
             else:
                 lg_q, hq = q_b(tq)
             lq = self.particle_lp(lg_q, uq, ljq)
-            o = {"logw": logw, "lq": lq, "ta": ta, "tq": tq, "lam": lam, "P": P, "hq": hq}
+            o = {"logw": logw, "lq": lq, "ta": ta, "tq": tq, "lam": lam, "P": P, "hq": hq, "theta": theta}
             if null is not None:
                 o |= {"null_lw": self.null_bias + null["ev"], "null_lq": null["lq"], "null_logits": null["logits"]}
             out.append(o)
             if last:
                 break
             if n:  # evidence block
+                g_th, g_x = self.lik_grads(theta, P, kvK, nfK, xa, ya)
                 pit = self.qb.cdf(lg_a, ua)
                 feats = torch.cat([fourier(xa)[:, None].expand(-1, K, -1, -1), fourier(ta),
                                    fourier(ya[..., None])[:, None].expand(-1, K, -1, -1), hd_a,
-                                   (lam / 10)[..., None], pit[..., None]], -1)  # fmt: skip
+                                   (lam / 10)[..., None], pit[..., None], g_x], -1)  # fmt: skip
                 E = (self.ev_in(feats) + P[:, :, None]).reshape(B * K, n, -1)
                 E = self.ev_self(E)
                 E = self.ev_look(E, Z.repeat_interleave(K, 0))
@@ -296,7 +324,30 @@ class A2B(nn.Module):
             rank = lw.argsort(-1).argsort(-1).float() / max(K - 1, 1)
             P = P + self.w_in(torch.stack([lwn.clamp(min=-20) / 10, rank], -1))
             P = self.p_self(P)
+            if n:  # move: a bounded step on θ, seeded as gradient ascent on the pseudo-likelihood
+                pre = self.gain * g_th
+                if self.move == "learned":
+                    inp = torch.cat([P, g_th.flatten(-2), theta.flatten(-2) / 5], -1)
+                    pre = pre + self.step_net(inp).view(B, K, d, self.tj)
+                theta = theta + self.max_step * torch.tanh(pre)
         return out
+
+    def lik_grads(self, theta, P, kvK, nfK, xa, ya):
+        """RMS-normalized gradients of the particles' pseudo-log-likelihood w.r.t. θ_k ([B, K, d, TJ]) and w.r.t. the
+        transported locations T_k(x_a) ([B, K, n, d]); first order only (inputs detached), also under no_grad."""
+        B, K = theta.shape[:2]
+        d = self.d
+        with torch.enable_grad():
+            th = theta.detach().requires_grad_()
+            ta = self.T(th, xa)
+            ta_l = ta.detach().requires_grad_()
+            lg, _ = self.qb.query(kvK, nfK, ta_l.reshape(B * K, -1, d))
+            ua, lja = self.h_inv(P.detach(), ya)
+            lam = self.particle_lp(lg.reshape(B, K, -1, lg.shape[-1]), ua.detach(), lja.detach())
+            (g_x,) = torch.autograd.grad(lam.sum(), ta_l)
+            (g_th,) = torch.autograd.grad(ta, th, grad_outputs=g_x)
+        rms = lambda g, dims: g / (g.pow(2).mean(dims, keepdim=True).sqrt() + 1e-8)  # noqa: E731
+        return rms(g_th, (-1, -2)).detach(), rms(g_x, (-1, -2)).detach()
 
 
 def mix_weights(o: dict, with_null: bool = True) -> torch.Tensor:
