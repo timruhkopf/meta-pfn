@@ -156,7 +156,7 @@ class MonotoneH(nn.Module):
 
 class A2B(nn.Module):
     def __init__(self, pfn, d: int, D: int = 128, M: int = 16, K: int = 8, R: int = 4, learn_h: bool = False,
-                 J: int = 16, predictive: str = "pseudo"):  # fmt: skip
+                 J: int = 16, predictive: str = "pseudo", null: bool = True):  # fmt: skip
         super().__init__()
         self._qb = [FrozenQB(pfn)]  # a list: keeps the frozen PFN out of state_dict and the optimizer
         self.d, self.D, self.K, self.R, self.learn_h, self.predictive = d, D, K, R, learn_h, predictive
@@ -177,6 +177,8 @@ class A2B(nn.Module):
         self.ev_in = nn.Sequential(nn.Linear(2 * gx + gy + DB + 2, D), nn.GELU(), nn.Linear(D, D))
         self.ev_self, self.ev_look, self.p_read, self.p_self = Block(D), Block(D), Block(D), Block(D)
         self.prior_head = nn.Linear(D, 1)
+        self.null = null
+        self.null_bias = nn.Parameter(torch.zeros(()))  # learned prior log-odds of the null particle
         self.w_in = nn.Linear(2, D)
 
     @property
@@ -201,6 +203,28 @@ class A2B(nn.Module):
 
     def particle_lp(self, logits, u, lj):
         return mix_eps(self.qb.logpdf(logits, u) + lj)
+
+    @torch.no_grad()
+    def null_particle(self, xa, ya, xq, yq) -> dict:
+        """The null particle ("B is unrelated"): the frozen PFN on A alone. Evidence = its chain-rule log-likelihood of
+        A's labels, Σ_a log PFN(y_a | A_<a, x_a); predictive = PFN(A) at x*. Empty contexts use the repo's convention
+        (masked (0, 0) dummy tokens, as `oracle.logp`). No gradient (no parameters)."""
+        B, n, d = xa.shape
+        if n == 0:
+            xc, yc, m = xa.new_zeros(B, 1, d), ya.new_zeros(B, 1), torch.zeros(B, 1, dtype=torch.bool, device=xa.device)
+            ev = xa.new_zeros(B)
+        else:
+            xc, yc, m = xa, ya, torch.ones(B, n, dtype=torch.bool, device=xa.device)
+            keep = torch.ones(n, n, device=xa.device).tril(-1).bool()  # row i: tokens j < i
+            Xc = (xa[:, None] * keep[None, :, :, None]).reshape(B * n, n, d)
+            Yc = (ya[:, None] * keep[None]).reshape(B * n, n)
+            Mc = keep[None].expand(B, -1, -1).reshape(B * n, n)
+            kvc, nfc, _ = self.qb.encode(Xc, Yc, mask=Mc)
+            lgc, _ = self.qb.query(kvc, nfc, xa.reshape(B * n, 1, d), mask=Mc)
+            ev = mix_eps(self.qb.logpdf(lgc[:, 0], ya.reshape(-1))).reshape(B, n).sum(1)
+        kv, nf, _ = self.qb.encode(xc, yc, mask=m)
+        lg, _ = self.qb.query(kv, nf, xq, mask=m)
+        return {"ev": ev, "lq": mix_eps(self.qb.logpdf(lg, yq)), "logits": lg}
 
     def forward(self, xb, yb, xa, ya, xq, yq, R: int | None = None) -> list[dict]:
         """-> one dict per step r = 0..R: logw [B, K], lq [B, K, Q] (log density of yq per particle), ta [B, K, n, d],
@@ -227,6 +251,7 @@ class A2B(nn.Module):
             lg, hd = self.qb.query(kvK, nfK, t.reshape(B * K, -1, d))
             return lg.reshape(B, K, -1, lg.shape[-1]), hd.reshape(B, K, -1, hd.shape[-1])
 
+        null = self.null_particle(xa, ya, xq, yq) if self.null else None
         out = []
         for r in range(R + 1):
             ta, tq = self.T(P, xa), self.T(P, xq)
@@ -243,11 +268,15 @@ class A2B(nn.Module):
                 xc = torch.cat([xb[:, None].expand(-1, K, -1, -1), ta], 2).reshape(B * K, -1, d)
                 yc = torch.cat([yb[:, None].expand(-1, K, -1), ua], 2).reshape(B * K, -1)
                 kvc, nfc, _ = self.qb.encode(xc, yc, grad=True)
-                lg_q = self.qb.query(kvc, nfc, tq.reshape(B * K, Q, d))[0].reshape(B, K, Q, -1)
+                lg_q, hq = self.qb.query(kvc, nfc, tq.reshape(B * K, Q, d))
+                lg_q, hq = lg_q.reshape(B, K, Q, -1), hq.reshape(B, K, Q, -1)
             else:
-                lg_q = q_b(tq)[0]
+                lg_q, hq = q_b(tq)
             lq = self.particle_lp(lg_q, uq, ljq)
-            out.append({"logw": logw, "lq": lq, "ta": ta, "tq": tq, "lam": lam, "P": P})
+            o = {"logw": logw, "lq": lq, "ta": ta, "tq": tq, "lam": lam, "P": P, "hq": hq}
+            if null is not None:
+                o |= {"null_lw": self.null_bias + null["ev"], "null_lq": null["lq"], "null_logits": null["logits"]}
+            out.append(o)
             if last:
                 break
             if n:  # evidence block
@@ -270,7 +299,13 @@ class A2B(nn.Module):
         return out
 
 
-def mixture_lp(o: dict) -> torch.Tensor:
-    """Bayes mixture log density of yq: [B, Q]."""
-    lw = o["logw"] - torch.logsumexp(o["logw"], -1, keepdim=True)
-    return torch.logsumexp(lw[..., None] + o["lq"], 1)
+def mix_weights(o: dict, with_null: bool = True) -> torch.Tensor:
+    """Normalized log weights [B, K (+1 for the null particle, last, if present and with_null)]."""
+    lw = o["logw"] if not (with_null and "null_lw" in o) else torch.cat([o["logw"], o["null_lw"][:, None]], 1)
+    return lw - torch.logsumexp(lw, -1, keepdim=True)
+
+
+def mixture_lp(o: dict, with_null: bool = True) -> torch.Tensor:
+    """Bayes mixture log density of yq: [B, Q]; `with_null=False`: the particles only."""
+    lq = o["lq"] if not (with_null and "null_lw" in o) else torch.cat([o["lq"], o["null_lq"][:, None]], 1)
+    return torch.logsumexp(mix_weights(o, with_null)[..., None] + lq, 1)

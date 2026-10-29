@@ -18,31 +18,31 @@ from ..experimental.a2b.prior import PriorCfg
 from ..tracking.sink import Run
 from ..utils.seeding import seed_everything
 
-VARIANTS = {  # task.variant -> overrides of the task config (`sup: auto` = loc for h = id, func otherwise)
+VARIANTS = {  # task.variant -> overrides of the task config
     "full": {},
     "r0": {"r": 0},  # init only: Perceiver + A-encoder + learned queries, no evidence blocks
     "k1": {"k": 1},  # one particle
-    "nosup": {"sup": "none"},  # NLL only, no privileged term
+    "nosup": {"sup": "none"},  # NLL only, no LUPI teacher
     "context": {"predictive": "context"},  # last step: PFN re-encoded on B ∪ A_inB per particle
+    "jepa": {"lat_w": 1.0},  # + latent LUPI: hidden states at T_k(x*) toward the privileged context's at T(x*)
 }
 
 
 def a2b(cfg: DictConfig, run: Run) -> float:
-    t = dict(cfg.task) | VARIANTS[cfg.task.variant]
-    if t["sup"] == "auto":
-        t["sup"] = "loc" if t["h_kind"] == "id" else "func"
-    t = DictConfig(t)
+    t = DictConfig(dict(cfg.task) | VARIANTS[cfg.task.variant])
     seed_everything(cfg.seed)
     torch.set_num_threads(t.threads)
     dev = t.device if torch.cuda.is_available() or t.device == "cpu" else "cpu"
     pfn = load(t.pfn, device=dev)[0].eval()
     pc = PriorCfg(d=t.d, t_sd=t.t_sd, h_kind=t.h_kind, e_min=t.e_min, h_sd=t.h_sd)
-    model = A2B(pfn, t.d, D=t.dm, M=t.m, K=t.k, R=t.r, learn_h=t.h_kind != "id", J=t.j, predictive=t.predictive)
+    model = A2B(pfn, t.d, D=t.dm, M=t.m, K=t.k, R=t.r, learn_h=t.h_kind != "id", J=t.j, predictive=t.predictive,
+                null=t.null_particle)  # fmt: skip
     model = model.to(dev)
     t0 = time.time()
     hist = T.train(
         model, pc, t.steps, dev, seed=cfg.seed, batch=t.batch, n_b=t.n_b, n_q=t.n_q, n_a_max=t.n_a_max, lr=t.lr,
-        sup=t.sup, sup_w=t.sup_w, every=t.every, metrics=run.log_metrics, log=lambda m: print(m, flush=True),
+        sup=t.sup, sup_w=t.sup_w, every=t.every, lat_w=t.lat_w, metrics=run.log_metrics,
+        log=lambda m: print(m, flush=True),
     )  # fmt: skip
     run.log_table("train", hist)
     torch.save(model.state_dict(), run.artifacts / "model.pt")

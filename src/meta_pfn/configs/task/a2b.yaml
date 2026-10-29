@@ -15,9 +15,11 @@ k: 8                  # particles
 r: 4                  # weight-tied evidence blocks (0 = init only: Perceiver + A-encoder + learned queries)
 j: 16                 # pieces of the monotone h_k (S4)
 predictive: pseudo    # pseudo (B only) | context (last step: PFN re-encoded on B ∪ A_inB per particle)
-variant: full         # full | r0 | k1 | nosup | context (tasks/a2b.py VARIANTS)
-sup: auto             # auto (loc for h = id, func otherwise) | loc | func | none
+variant: full         # full | r0 | k1 | nosup | context | jepa (tasks/a2b.py VARIANTS)
+sup: lupi             # lupi (NLL + distillation from the privileged teacher) | none (NLL only)
+null_particle: true   # the null particle (A-only PFN) competes in the mixture
 sup_w: 1.0
+lat_w: 0.0            # latent LUPI weight (variant jepa = 1.0)
 steps: 12000
 batch: 32
 lr: 3e-4

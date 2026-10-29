@@ -118,3 +118,16 @@ with deliverables and open questions.
   design note (tested against `nosup`, given the user's earlier reservation about warp supervision).
 - Launches (ulysses, 3 detached queues in parallel): S3 d=1 × 5 variants; S3 d=2 × {full, r0, context}; S4 d=1 ×
   {affine, kum} × {full, nosup}. 12k steps each (~0.24 s/step alone on the GPU).
+
+### 2026-10-29 11:30 — a2b relaunch: LUPI only, null particle, jepa variant (issue #18)
+- First launch (10:19; `runs/a2b/pilot_20261029-1019{28,29,30}`) stopped by hand after ~15 min, nothing reported: the
+  user reaffirmed "no warp parameter heads, just LUPI" and asked that B be discounted as evidence against it accumulates.
+  (The S4 sweep had also failed at start: GPU OOM next to two S3 queues; its KL term was made lighter.)
+- Changes: privileged location / function-space losses removed; LUPI teacher distillation (PFN(B ∪ A_inB) on related,
+  A-only on unrelated pairs); null particle (A-only PFN, chain-rule evidence + learned offset); unrelated pairs in
+  training; particles-only NLL on related pairs (the null dominates at init otherwise: gradient norm ~1e-20 in a smoke
+  run); variant `jepa` (user's latent-target idea: particles' hidden states at T_k(x*) toward the frozen PFN's with the
+  privileged context). Tests 7/7 (null particle = A-only PFN chain rule to 1e-4). Notebook 09 description updated
+  before the relaunch.
+- User preferences recorded: low-rank K/V residual on top-k attended B tokens for local correction (next round, with
+  cache targets KV(B | B ∪ A_inB) − KV(B | B)).
