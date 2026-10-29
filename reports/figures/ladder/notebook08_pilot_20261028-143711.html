@@ -7885,6 +7885,32 @@ One member per $(d, N_B)$; $N_B = 200$ (the design note's value) is run as an <s
 </tr>
 </tbody>
 </table>
+<p><strong>The two likelihoods</strong> <em>(explanation added 2026-10-29)</em>. Both score a shift $s$ by how well "A = B's function at
+$x + s$" explains A's labels.</p>
+<ul>
+<li><em>Pseudo</em> (<code>grid_pseudo</code>, <code>map_pseudo</code>; the architecture's): $\log L(s) = \sum_a \log Q_B(y_a \mid x_a + s)$. Each A
+point is a test token against B's cache alone. Test tokens never attend to each other, so A's points are treated as
+independent given B. The predictive reads B only.</li>
+<li><em>Exact</em> (<code>grid_exact</code>): the chain rule $\log L(s) = \sum_a \log \mathrm{PFN}(y_a \mid B \cup \{(x_j + s, y_j)\}_{j&lt;a},\, x_a + s)$.
+Each A point is predicted from B plus the A points before it, already moved into B. For a Bayes-optimal PFN this is
+$\log p(y_{1..n} \mid x_{1..n}, B, s)$. The predictive conditions on $B \cup A_{\mathrm{in}B}(s)$. It costs one full
+re-encoding per (shift, prefix), because the bidirectional PFN cannot reuse B's cache once A is added.</li>
+</ul>
+<p><strong>The Bayes-null model</strong> (<code>bayes_null</code>) <em>(explanation added 2026-10-29)</em>: a two-hypothesis model comparison with prior
+1/2 each.</p>
+<ul>
+<li>$H_1$ "related" (a shift, uniform on the grid) has evidence $Z_1 = \frac1G \sum_s L_{\text{exact}}(s)$.</li>
+<li>$H_0$ "unrelated" (ignore B) has evidence $Z_0 = \prod_a \mathrm{PFN}(y_a \mid A_{&lt;a}, x_a)$, the A-only PFN's marginal
+likelihood of A's labels by the chain rule.</li>
+<li>Posterior $p_1 = Z_1 / (Z_1 + Z_0)$ (<code>p_related</code>); predictive $p_1 \cdot$ <code>grid_exact</code> $+ (1 - p_1) \cdot$ <code>a_only</code>.</li>
+<li>At $n_A = 0$ it is a 50/50 mixture. A mixture is never more than $\log 2 \approx 0.69$ nats/query worse than its better
+component, so <code>bayes_null</code> starts within 0.69 of <code>grid_exact</code> on related pairs and of <code>a_only</code> on unrelated ones.</li>
+<li>As A's points arrive, the evidence decides: an unrelated B predicts A's labels confidently and wrongly, so $p_1$
+collapses after one or two points and <code>bayes_null</code> merges with <code>a_only</code>. On related pairs $p_1 \to 1$ and it merges
+with <code>grid_exact</code>.</li>
+<li>This is the design note's null particle (§2.4). The note scores it with a leave-one-out likelihood; here the
+prequential chain rule is used, which is a proper marginal likelihood.</li>
+</ul>
 <p>Grid: 201 points ($d=1$, step 0.002), $41^2$ ($d=2$, step 0.01), uniform prior (= the generating prior); $x + s$ clipped to
 $[0,1]^d$. GD: Adam (lr 0.01, 200 steps) on the pseudo log-likelihood from $s = 0$, $s$ projected to the prior box; success =
 its log-likelihood within 0.1 nats of the grid MAP's.</p>
@@ -9276,6 +9302,77 @@ local refinement; (iii) in $d = 2$, $s$ is only partly identifiable (median MAP 
 flat directions of $f$) while predictions are fine: supervise in function space, not $\lVert s - s_{\text{true}} \rVert^2$
 alone; (iv) without a null hypothesis the unrelated stratum costs +5 to +13 nats/query vs A-only; <code>bayes_null</code> is within 0.4 at $n_A = 1$ and 0.03 from $n_A = 5$.</li>
 <li>Probe $N_B = 200$ (outside the PFN's range): the oracle is slightly better (−4.35 vs −4.24, $d = 1$), no breakdown.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a89a0ec9">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Findings-and-interpretation-(2026-10-29)">Findings and interpretation (2026-10-29)<a class="anchor-link" href="#Findings-and-interpretation-(2026-10-29)">¶</a></h2><p><em>Discussion after the results; numbers from the snapshot above.</em></p>
+<p><strong>1. What identifies the shift here.</strong> Nothing is learned in S0/S1. S1 enumerates the candidate shifts on a grid and
+weighs each by its likelihood under the frozen PFN:</p>
+<ol>
+<li>B's context is encoded once (<code>context_kv</code>), giving the per-layer keys/values of B's tokens.</li>
+<li>For every grid shift $s$, the queries $\mathrm{clip}(x_a + s)$ and $\mathrm{clip}(x^* + s)$ go through the PFN's test
+path against that cache, all in one batch.</li>
+<li>The weights are $w_s \propto \exp \sum_a \log Q_B(y_a \mid x_a + s)$, under a uniform prior.</li>
+<li>The prediction mixes $Q_B(y^* \mid x^* + s)$ over $s$, or reads it at the argmax for <code>map_pseudo</code>.</li>
+</ol>
+<p>GD is the local alternative: Adam on $s$ through the same test path. "Correcting for the shift" means only choosing or
+weighing $s$; A's labels never enter B's computation. In the full design, particles replace the grid and learned
+refinement blocks replace exhaustive search, but the likelihood they compute is this pseudo-likelihood.</p>
+<p><strong>2. The orange–purple gap</strong> (<code>grid_pseudo</code> vs <code>grid_exact</code>) has two sources:</p>
+<ul>
+<li><em>Weights.</em> The pseudo-likelihood treats A's points as independent given B, because the PFN's test tokens never attend
+to each other. That holds given $f$, not given B: B leaves uncertainty about $f$ that all of A's points share. The
+correct factorisation is $\sum_a \log p(y_a \mid B, y_{&lt;a}, s)$.<ul>
+<li>Example: two A points land where B is vague, both above B's mean. The chain rule charges the surprise once; after
+the first point the second is expected. The pseudo-likelihood charges it twice. That double-counts evidence, and the
+posterior over $s$ is overconfident.</li>
+</ul>
+</li>
+<li><em>Predictive.</em> $Q_B$ only sees B's cache, so A's points cannot correct B where B is wrong or vague. <code>grid_exact</code>
+conditions on $B \cup A_{\mathrm{in}B}(s)$ and can.</li>
+</ul>
+<p>The gap is small here (≤ 0.04 nats/query at $n_A \le 5$; 0.08 at $d = 2$, $n_A = 10$). With $N_B = 80$, $h = \mathrm{id}$ and
+a related B, $Q_B$ is nearly certain, so A's points are nearly independent given B. The gap is large where B is
+uninformative about A: on unrelated pairs <code>grid_pseudo</code> gets worse with $n_A$ while <code>grid_exact</code> improves. Expect it
+to grow with sparse or biased B, partial relatedness, and larger $d$.</p>
+<p><strong>3. Using A both to identify the shift and to correct B locally is not double use, if it is done consistently.</strong>
+$p(y^* \mid A, B) = \sum_s p(s \mid A, B)\, p(y^* \mid A, B, s)$ uses A in both factors, and that is correct when the
+weights come from the joint (chain-rule) likelihood: it already credits A's points for being explained partly by the
+local correction. <code>grid_exact</code> does exactly this.</p>
+<p>Double use arises from mixed bookkeeping: pseudo weights (A explained by B alone) combined with a predictive that also
+conditions on A. The full design has this form (pseudo weights → $p_{\text{mix}}$ → a final PFN that also conditions on
+A). There, only end-to-end training on the NLL can learn to undo the resulting overconfidence; that is amortised, not
+guaranteed. A plug-in MAP $\hat s$ followed by conditioning on A again is the mild, empirical-Bayes version of the same
+issue. With flexible $T$ plus a residual (S3/S4), warp and local correction compete to explain the same points, and the
+joint likelihood plus the prior is what arbitrates.</p>
+<p><strong>4. Options for accounting for A's evidence without exploding compute.</strong> The user does not want tempering or the
+causal PFN.</p>
+<ul>
+<li><em>Re-encode per particle:</em> $\mathrm{PFN}(B \cup T_k(A))$ at $T_k(x^*)$. That is $K$ contexts of $N_B + n_A$ tokens, cheap
+at $N_B \approx 100$; what made S1 expensive was the grid of 1681 shifts.</li>
+<li><em>A-token self-attention:</em> transported A_train tokens as extra keys for A_test queries. For the likelihood of A_train
+itself a mask is needed: leave-one-out or prefix.</li>
+<li><em>A learned residual on B's cache:</em> $\Delta K, \Delta V$ of B's tokens from cross-attention to the transported A tokens,
+zero-initialised and distilled from the exact path. This is a light, learned version of what the bidirectional PFN
+does when A joins the context.</li>
+</ul>
+<p><strong>5. For the next rungs.</strong></p>
+<ul>
+<li><strong>Search, not likelihood, is the bottleneck.</strong> The landscape over $s$ is rugged: GD from $s = 0$ finds the MAP in
+43–61% of pairs, best of 8 starts in 89–99%. Yet the posterior is sharp from $n_A \approx 2$–5.</li>
+<li><strong>One hypothesis is not enough at $n_A \le 2$</strong> (unimodal 56–84%).</li>
+<li><strong>At $d = 2$, $s$ is only partly identifiable</strong> (ridges along flat directions of $f$) while predictions are fine:
+supervise in function space.</li>
+<li><strong>The null hypothesis is essential:</strong> it limits the damage from an unrelated B to at most 0.38 nats/query from
+$n_A = 1$.</li>
 </ul>
 </div>
 </div>
