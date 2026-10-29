@@ -5,6 +5,7 @@ from collections.abc import Callable
 from omegaconf import DictConfig
 
 from ..tracking.sink import Run
+from .a2b import a2b
 from .fieldonly import fieldonly
 from .gwonly import gwonly
 from .headroom import headroom
@@ -18,6 +19,7 @@ from .toy_regression import toy_regression
 Pipeline = Callable[[DictConfig, Run], float | None]
 
 TASKS: dict[str, Pipeline] = {
+    "a2b": a2b,
     "fieldonly": fieldonly,
     "gwonly": gwonly,
     "headroom": headroom,

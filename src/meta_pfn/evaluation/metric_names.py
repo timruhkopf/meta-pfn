@@ -24,3 +24,4 @@ FIELDONLY_FRAC_N10 = "final/frac_005_n10"  # fieldonly: share of pairs (C10, n_A
 GWONLY_FRAC_N5 = "final/frac_005_n5"  # gwonly: share of covered A points (C10, n_A = 5) with landmark error < 0.05
 METAPFN_GAIN_N5 = "final/gain_n5"  # metapfn: NLL(A-only PFN) - NLL(model) at n_A = 5, mean over the 4 related cells
 LADDER_S0_GAIN_N2 = "final/s0_gain_n2"  # ladder: NLL(a_only) - NLL(oracle_q), shift stratum, n_A = 2
+A2B_NLL_N5 = "final/nll_n5"  # a2b: model mixture NLL on A queries, warp stratum, n_A = 5, last step

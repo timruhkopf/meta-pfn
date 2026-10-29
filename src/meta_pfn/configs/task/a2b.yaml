@@ -1,0 +1,29 @@
+# A→B architecture, S3/S4 (tasks/a2b.py; issue #18, notebook 09). Frozen pfn_large + learned registration.
+name: a2b
+pfn: pfn_large        # the frozen variable-d checkpoint (pfn-repro v0.1.0), contexts n <= 100
+d: 1                  # 1 | 2
+h_kind: id            # S3: id | S4: affine | kum (monotone)
+t_sd: 0.5             # T: per-dim Kumaraswamy bijection, log α, log β ~ N(0, t_sd²)
+e_min: 0.5            # affine h: slope e ~ U(e_min, 1)
+h_sd: 0.5             # kum h: log a, log b ~ N(0, h_sd²)
+n_b: 80               # N_B (user OK, 2026-10-28)
+n_q: 32               # held-out A queries per pair
+n_a_max: 10           # training n_A ~ U{0..n_a_max}
+dm: 128               # model width
+m: 16                 # Perceiver latents
+k: 8                  # particles
+r: 4                  # weight-tied evidence blocks (0 = init only: Perceiver + A-encoder + learned queries)
+j: 16                 # pieces of the monotone h_k (S4)
+predictive: pseudo    # pseudo (B only) | context (last step: PFN re-encoded on B ∪ A_inB per particle)
+sup: loc              # loc (S3, h = id) | func (composite, S4) | none
+sup_w: 1.0
+steps: 12000
+batch: 32
+lr: 3e-4
+every: 250
+n_eval: 128           # evaluation pairs per stratum
+n_hyp: 8192           # importance-sampling reference: prior draws of (T, h)
+refs: true
+eval_seed: 424242
+device: cuda
+threads: 4

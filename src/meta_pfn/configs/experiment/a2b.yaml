@@ -1,0 +1,5 @@
+# @package _global_
+# A→B architecture S3/S4: does a learned Perceiver + particle model identify the transform in context? (issue #18)
+# Pre-registration: notebooks/09_*_a2b.ipynb. One member per (d, h_kind, variant); see the notebook for the sweeps.
+defaults:
+  - override /task: a2b
