@@ -85,6 +85,56 @@ Frozen PFN only, no training; $N_B = 80$ because `pfn_large`'s context is $n \le
 4. **With a null particle,** add the particles-only NLL on related pairs. Otherwise the null dominates at init and the
    particles get no gradient (gradient norm ~1e-20 in a smoke run).
 
+## The user's feedback on these ideas (2026-10-29, later)
+
+- **Likes** the JEPA-like latent targets with the weights inside the log (a mixture over particles, so that only the
+  responsible particle is pulled toward the target), to avoid regression to the mean under multimodality.
+- **InfoNCE** with hard negatives from other sampled transforms of the same pair: "not too unreasonable".
+- **Doubts** that per-layer K/V corrections over all layers are feasible ("given the depth of the network ... quite an
+  undertaking even with low-rank updates"). Asks whether it is worth pursuing at all.
+
+## Measurement relevant to that doubt
+
+Frozen `pfn_large`, no training; $d = 1$, $N_B = 80$, 64 warp pairs, true $T$:
+$\Delta KV_l = KV_l(B \mid B \cup A_{\text{in}B}) - KV_l(B \mid B)$ over B's rows.
+
+| quantity | $n_A = 2$ | $n_A = 5$ | $n_A = 10$ |
+|---|---|---|---|
+| $\lVert \Delta KV \rVert / \lVert KV \rVert$, layers 1 → 7 (K) | 0.010 → 0.046 | 0.019 → 0.070 | 0.033 → 0.108 |
+| same for V | 0.012 → 0.082 | 0.020 → 0.121 | 0.036 → 0.174 |
+| energy in the 16 B rows nearest to A's transported points (random 16 of 80 would give 0.20), layers 1 → 7 (V) | 0.20 → 0.75 | 0.20 → 0.59 | 0.21 → 0.47 |
+| energy in the best 16 rows (upper bound), layers 1 → 7 (V) | 0.39 → 0.80 | 0.38 → 0.74 | 0.38 → 0.72 |
+| rank for 90% of the energy, per layer | 2.5–6.7 | 2.5–7.9 | 2.6–8.1 |
+| prediction gain from adding $A_{\text{in}B}$ to B's context (nats/query) | 0.013 | 0.027 | 0.040 |
+
+Layer 0 is unchanged, since it only embeds each token by itself.
+
+**Reading (A→B session).**
+- The update of B's representation by A's evidence is **small, low-rank (≈ 3–8), and not row-local** in the early
+  layers; it becomes more local only in the last layers and at small $n_A$. So "top-k by attention" is a poor selector.
+  A global low-rank update (all B rows, rank ~4–8), restricted to the last 2–3 layers where most of the energy is, fits
+  better and is cheap.
+- **It is worth little on this prior.** With a dense, exactly related B ($f_A = f_B \circ T$), adding A to B's context
+  improves prediction by only 0.01–0.04 nats/query. The cache correction can only pay off once the prior contains local
+  disagreement between A and B (residual $r$ / partial relatedness, $\rho > 0$).
+- At $N_B \le 100$, exact re-encoding of $B \cup A_{\text{in}B}$ per particle is affordable; that is the `context`
+  variant now running. The residual matters for scaling to $N_B \gg 100$, which is also beyond `pfn_large`'s trained
+  range.
+
+## Questions for the registration session to discuss
+
+1. Should A's evidence enter B at all, or only through the weights, the null particle and the final PFN on
+   $[A, A_{\text{test}}]$? Weigh this against the measurement above.
+2. If B is corrected: a global low-rank update on the last layers, re-encoding per particle, or something from
+   point-cloud registration / unbalanced Sinkhorn (e.g. soft correspondences that are allowed to leave mass unmatched,
+   as a local relevance mask on B)?
+3. Latent LUPI: the mixture critic $-\log \sum_k w_k e^{s(h_k, h^*)/\tau}$ vs InfoNCE with transform-sampled hard
+   negatives vs both. Which layer's representation to target?
+4. How unbalanced-OT ideas fit the proposal and search problem from S1 (rugged landscape, so good starts matter more
+   than local refinement) without reintroducing the order-only GW that failed (#13).
+5. One concise architecture: modules, data flow, frozen vs learned, LUPI-only losses, where A's evidence enters, and the
+   open choices with the experiment that decides each.
+
 ## Running (ulysses, notebook 09)
 
 - **S3** ($h = \mathrm{id}$, monotone warp):
