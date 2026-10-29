@@ -15,7 +15,8 @@ k: 8                  # particles
 r: 4                  # weight-tied evidence blocks (0 = init only: Perceiver + A-encoder + learned queries)
 j: 16                 # pieces of the monotone h_k (S4)
 predictive: pseudo    # pseudo (B only) | context (last step: PFN re-encoded on B ∪ A_inB per particle)
-sup: loc              # loc (S3, h = id) | func (composite, S4) | none
+variant: full         # full | r0 | k1 | nosup | context (tasks/a2b.py VARIANTS)
+sup: auto             # auto (loc for h = id, func otherwise) | loc | func | none
 sup_w: 1.0
 steps: 12000
 batch: 32

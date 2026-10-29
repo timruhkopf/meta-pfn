@@ -107,3 +107,14 @@ with deliverables and open questions.
   about half the pairs, best of 8 starts in 89–99%; s partly unidentifiable at d = 2 while predictions are fine.
 - User (2026-10-28): N_B = 80 is fine as the main arm.
 - Open: `just decide` the verdict (the user's call on the drafted rule); S2 design; the pre-push hook / .git/config issue.
+
+### 2026-10-29 10:40 — S3/S4 of the A→B architecture (issue #18, branch exp/18-a2b-s3s4)
+- Mandate (user, 2026-10-29): "i want to see S3 and maybe S4 ... if the perceiver correction can already identify the
+  transform and how we need to move A into B (and maybe even account for the new evidence in A?)"; keep the design
+  open to change. No tempering, no causal PFN (user).
+- Built: experimental/a2b (prior, model, train/eval), tasks/a2b.py with variants full / r0 / k1 / nosup / context,
+  tests 6/6; notebook 09 description and drafted GO / NO-GO before the first run. Branch stacked on exp/16.
+- Choices: T = full-box Kumaraswamy bijection (user's 2026-10-22 "no sub-windows"), location supervision as in the
+  design note (tested against `nosup`, given the user's earlier reservation about warp supervision).
+- Launches (ulysses, 3 detached queues in parallel): S3 d=1 × 5 variants; S3 d=2 × {full, r0, context}; S4 d=1 ×
+  {affine, kum} × {full, nosup}. 12k steps each (~0.24 s/step alone on the GPU).

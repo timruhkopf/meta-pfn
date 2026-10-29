@@ -18,9 +18,20 @@ from ..experimental.a2b.prior import PriorCfg
 from ..tracking.sink import Run
 from ..utils.seeding import seed_everything
 
+VARIANTS = {  # task.variant -> overrides of the task config (`sup: auto` = loc for h = id, func otherwise)
+    "full": {},
+    "r0": {"r": 0},  # init only: Perceiver + A-encoder + learned queries, no evidence blocks
+    "k1": {"k": 1},  # one particle
+    "nosup": {"sup": "none"},  # NLL only, no privileged term
+    "context": {"predictive": "context"},  # last step: PFN re-encoded on B ∪ A_inB per particle
+}
+
 
 def a2b(cfg: DictConfig, run: Run) -> float:
-    t = cfg.task
+    t = dict(cfg.task) | VARIANTS[cfg.task.variant]
+    if t["sup"] == "auto":
+        t["sup"] = "loc" if t["h_kind"] == "id" else "func"
+    t = DictConfig(t)
     seed_everything(cfg.seed)
     torch.set_num_threads(t.threads)
     dev = t.device if torch.cuda.is_available() or t.device == "cpu" else "cpu"
