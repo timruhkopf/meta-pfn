@@ -7916,7 +7916,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1e4cfe55">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8062,7 +8062,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=40193874">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8073,7 +8073,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1a2888b4">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8083,7 +8083,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2dc3cda3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8131,7 +8131,31 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=39bb4b10">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> Each line is the mean, over the 100 pairs of the stratum, of the held-out NLL per A query:
+$-\log p(y^* \mid \cdot)$ under the predictor's bar distribution, in nats; <strong>lower is better</strong>. $y$ lives on $[0, 1]$ (the
+ECDF scale), so densities above 1 are normal and NLL can be negative: $-4$ means a density of $e^4 \approx 55$ at the
+observation, i.e. a predictive about 0.02 wide. A difference of 1 nat = a factor $e$ in density at the observed value.
+The x-axis is $n_A$, A's labelled points in context (nested prefixes of one design, so the curves are paired across
+$n_A$). Bands: ±1 SE over pairs. Each panel has its own y-scale.</p>
+<ul>
+<li><code>oracle_q</code> is flat: it reads only B (at $x^* + s$) and ignores A. <code>teacher_b</code> lies on top of it, hiding the blue line.</li>
+<li><strong>Shift column:</strong> the vertical gap between grey (A only) and blue/green is what B is worth when the registration is
+known: the ceiling for everything later. Red (naive pooling) <em>above</em> grey: adding B unregistered hurts.</li>
+<li><strong>Identity column (sanity):</strong> with $s = 0$ every B-based predictor coincides, naive included.</li>
+<li><strong>Unrelated column (negative transfer):</strong> B-based predictors are catastrophically confident and wrong (~+12 nats);
+the teachers recover slowly because A's points in the context gradually override B's.</li>
+</ul>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8263,7 +8287,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3d9f7f2e">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8273,7 +8297,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5aabde80">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8319,7 +8343,20 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4b369d50">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> In A's coordinates. Blue = B read through the PFN at $x + s$ (the oracle particle); it should
+trace the black truth everywhere, including far from A's points. Grey = A-only PFN with the 5 black points: good near
+them, wide (10–90% band) elsewhere. Wiggles that B gets and A-only cannot (pair 2) are exactly the transferable part.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=10">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8329,7 +8366,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a5f5d51d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=11">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8355,7 +8392,28 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e047919e">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=12">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> Same axes as S0; now $s$ is <em>unknown</em> and inferred from A's points on a grid (uniform prior).</p>
+<ul>
+<li><strong>$n_A = 0$:</strong> <code>grid_*</code> average B's prediction over all shifts (the prior predictive). It is already better than A
+only, because B tells the range and shape of values. <code>map_pseudo</code> is very bad there: with a flat posterior the argmax
+is an arbitrary grid point ($s = -0.2$), i.e. one particle committed to a random hypothesis. <strong>Where yellow joins
+orange tells you when a single hypothesis is enough</strong> (about $n_A = 5$).</li>
+<li><strong>Orange/purple → blue:</strong> how fast the shift is identified. The orange–purple gap is the cost of the pseudo-likelihood
+(A's points independent given B) against the exact chain rule.</li>
+<li><strong>Unrelated:</strong> <code>grid_pseudo</code> gets <em>worse</em> with $n_A$ (it grows confident in some wrong shift); <code>grid_exact</code> improves
+because A's points enter its context. Pink (<code>bayes_null</code>) on grey: the null hypothesis wins, so no harm.</li>
+</ul>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=13">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8642,7 +8700,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a9fa6204">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=14">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8652,7 +8710,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bee52c43">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=15">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8693,7 +8751,30 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f33218fb">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=16">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> Each point averages a statistic of the grid posterior over $s$ across the 100 shift pairs at
+that $n_A$ (orange = pseudo-likelihood, purple = exact; solid $d = 1$, dashed $d = 2$; orange and purple mostly overlap).</p>
+<ul>
+<li><strong>Unimodal fraction:</strong> share of pairs whose posterior has exactly one connected region above 5% of its peak (on the
+grid; 8-neighbourhood in 2-D). This is "when is one hypothesis enough".</li>
+<li><strong>Median MAP error</strong> $\lVert \hat s_{\text{MAP}} - s \rVert$ (log scale). Floor = grid resolution (step 0.002 for
+$d = 1$, 0.01 for $d = 2$); the prior range is 0.4 per axis.</li>
+<li><strong>Entropy / log G:</strong> 1 = flat over the grid, 0 = all mass on one grid point.</li>
+<li><strong>Mass within 0.05 of s</strong> ($L_\infty$): the prior alone gives about 0.25 ($d = 1$) and 0.06 ($d = 2$).</li>
+</ul>
+<p>What to look for: unimodality jumps between $n_A = 1$ and 5. In $d = 2$ the MAP error stalls near 0.05 and only about
+half the mass is near the truth, while prediction is fine (S1 NLL figure). The posterior is concentrated, but along a
+direction in which $f$ barely changes, so the error there doesn't matter for prediction (see the 2-D heatmaps).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=17">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8703,7 +8784,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=15d00715">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=18">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8750,7 +8831,27 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=bb4f7213">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=19">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> One column per example pair: shift pairs, then one identity pair (true $s = 0$) and one
+unrelated pair (no true $s$). The curves are the posterior density over $s$ after $n_A = 1, 2, 5, 10$ points (light → dark
+blue). Top row = pseudo-likelihood, bottom = exact chain rule. Grey line = true $s$. Heights are not comparable across
+panels (a sharper peak is taller).</p>
+<ul>
+<li><strong>A peak on the grey line</strong> = identified. <strong>Several peaks</strong> = several shifts under which B explains A's few points
+equally well; they disappear as $n_A$ grows. This is the multimodality that one particle cannot represent.</li>
+<li><strong>Unrelated:</strong> the posterior still concentrates, confidently, on a wrong shift. Posterior <em>shape</em> cannot detect
+unrelatedness; the <em>evidence</em> relative to the A-only hypothesis can (<code>bayes_null</code>).</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=20">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8760,7 +8861,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7d8c382b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=21">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8808,7 +8909,27 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3e57f333">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=22">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> The posterior over $(s_1, s_2)$ for three shift pairs (rows) at $n_A = 1, 2, 5, 10$ (columns).
+Vertical axis $s_1$, horizontal $s_2$; darker = more mass, normalised per panel to its peak. × = true $s$, + = MAP.</p>
+<ul>
+<li><strong>$n_A = 1$:</strong> the mass lies on curves. One observation only says "$f_B(x_1 + s) \approx y_1$", which pins $s$ to a
+level set of $f_B$ (shifted by $x_1$): a 1-D curve in the 2-D shift space.</li>
+<li><strong>More points</strong> give more level sets; their intersection shrinks to a blob near ×. If the MAP lands on another
+branch at small $n_A$ (pair 2), that is a multimodal posterior.</li>
+<li><strong>An elongated blob</strong> = a direction along which $f$ is flat: $s$ is not identified along it, but predictions don't
+care. This is why S2 should be supervised in function space.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=23">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8818,7 +8939,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9e966739">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=24">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8867,7 +8988,30 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=06771600">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=25">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong></p>
+<ul>
+<li><strong>Left:</strong> "success" = GD's final pseudo log-likelihood is within 0.1 nats of the best grid point. It measures
+whether GD found the global optimum, not its distance to the true $s$. Blue = one start at $s = 0$ (the identity
+initialisation an amortised model would use); orange = best of 8 starts, picked by log-likelihood.</li>
+<li><strong>Right ($d = 1$ examples, $n_A = 5$):</strong> the orange curve is the landscape $\log L(s) = \sum_a \log Q_B(y_a \mid x_a + s)$,
+the log posterior up to a constant. Black dots are GD's iterates every 10 steps from $s = 0$, drawn on the curve at
+their $s$. Grey = true $s$.</li>
+</ul>
+<p>What to look for: many local maxima, spaced roughly at the length scale of $f$. GD climbs the nearest hill (pair 2 gets
+stuck around $s \approx 0.04$). The global peak is tens of nats above the others, so the <em>posterior</em> is essentially a point
+mass even though the <em>landscape</em> is rugged: inference is a search problem, not an ambiguity problem. That argues for
+good proposals or several particles over more local refinement steps.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=26">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8877,7 +9021,7 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=58314423">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=27">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -9098,7 +9242,20 @@ which favours the Bayes learner. Pilot split only; nothing here is tuned on spli
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3aedec64">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=28">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>How to read.</strong> Mean NLL per query (lower is better), shift stratum, $N_B = 80$ vs the out-of-range
+$N_B = 200$. Look for whether the larger B context still behaves: it does, and is slightly better. It is not used for any
+verdict, because <code>pfn_large</code> was trained on contexts with $n \le 100$.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=29">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
