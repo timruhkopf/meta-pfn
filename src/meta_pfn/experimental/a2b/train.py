@@ -29,7 +29,8 @@ from .prior import STRATA, Inst, PairPrior, PriorCfg, apply_t, h_inv_logjac
 TRAIN_P = {"identity": 0.2, "warp": 0.8}
 N_A_EVAL = (0, 1, 2, 5, 10)
 DELTA = 0.05  # winner-takes-all: weight on the non-winning particles
-Y_GRID = 64
+Y_GRID = 32
+KL_Q = 8  # func: the KL uses A's first KL_Q queries (memory; a training signal, not a metric)
 
 
 def _lr(opt, step: int, steps: int, lr: float, warm: int = 300):
@@ -52,18 +53,19 @@ def oracle_lp(qb: FrozenQB, kv, nf, inst: Inst, x: torch.Tensor, y: torch.Tensor
     return mix_eps(qb.logpdf(lg, u) + lj)
 
 
-def func_kl(model: A2B, kv, nf, inst: Inst, o: dict) -> torch.Tensor:
-    """Discretized KL(p* || p_k) on a y-grid at A's queries, mean over queries: [B, K]."""
+def func_kl(model: A2B, kv, nf, inst: Inst, o: dict, n_q: int | None = None) -> torch.Tensor:
+    """Discretized KL(p* || p_k) on a y-grid at A's first n_q queries (all if None), mean over them: [B, K]."""
     B, K, Q = o["lq"].shape
+    Q = Q if n_q is None else min(n_q, Q)
     yg = (torch.arange(Y_GRID, device=inst.xq.device) + 0.5) / Y_GRID
     ys = yg.expand(B, Q, -1).reshape(B, -1)  # [B, Q * Y]
     with torch.no_grad():
-        lg, _ = model.qb.query(kv, nf, apply_t(inst.xq, inst.t_al, inst.t_be))  # [B, Q, G]
+        lg, _ = model.qb.query(kv, nf, apply_t(inst.xq[:, :Q], inst.t_al, inst.t_be))  # [B, Q, G]
         u, lj = h_inv_logjac(ys, inst.h_kind, inst.h_par)
         ls = mix_eps(model.qb.logpdf_grid(lg, u.reshape(B, Q, Y_GRID)) + lj.reshape(B, Q, Y_GRID))
         ps = ls.log_softmax(-1)  # [B, Q, Y]
     kvK = [(k.repeat_interleave(K, 0), v.repeat_interleave(K, 0)) for k, v in kv]
-    lgk, _ = model.qb.query(kvK, nf.repeat_interleave(K, 0), o["tq"].reshape(B * K, Q, -1))
+    lgk, _ = model.qb.query(kvK, nf.repeat_interleave(K, 0), o["tq"][:, :, :Q].reshape(B * K, Q, -1))
     uk, ljk = model.h_inv(o["P"], ys)  # [B, K, Q * Y]
     lk = mix_eps(
         model.qb.logpdf_grid(lgk.reshape(B, K, Q, -1), uk.reshape(B, K, Q, Y_GRID)) + ljk.reshape(B, K, Q, Y_GRID)
@@ -97,7 +99,7 @@ def train(model: A2B, cfg: PriorCfg, steps: int, device: str, *, seed: int, batc
             ]).mean()  # fmt: skip
         elif sup == "func":
             kv, nf, _ = model.qb.encode(inst.xb, inst.yb)
-            loss_sup = torch.stack([wta(func_kl(model, kv, nf, inst, o)) for o in outs]).mean()
+            loss_sup = torch.stack([wta(func_kl(model, kv, nf, inst, o, KL_Q)) for o in outs]).mean()
         loss = nll + sup_w * loss_sup
         opt.zero_grad(set_to_none=True)
         loss.backward()
