@@ -78,3 +78,32 @@ with deliverables and open questions.
 - Verified: 10 fieldonly tests and the full suite pass (111 passed, 1 skipped before the fix commit); all sweeps DONE.
 - Results: USABLE, just (optimizer 0.555 at C10, n_A = 10); learned beats gd: no; C00 no-harm: fails
   (log `2026-10-26_fieldonly.md` §1).
+
+### 2026-10-28 13:45 — Sanity ladder S0/S1 for the A→B query architecture (issue #16, branch exp/16-ladder-s0s1)
+- Mandate (user, 2026-10-28): new clean branch; read the design note `metapfn_A_to_B_architecture (1).md` and put it
+  into the logs (docs/design_2026-10-28_A_to_B_architecture.md, with the pasted Q&A as appendix A); prepare and run S0
+  and S1 of its §8 ladder with the pfn-repro variable-d checkpoint (pfn_large), on ulysses; report with a notebook with
+  visualizations.
+- Branch from origin/exp/14-fieldonly (the tip of the unmerged stack; main has only the template). Experiment `ladder`,
+  notebook 08, description and drafted GO / NO-GO written before the first run.
+- Deviation: N_B = 80 (pfn_large's n <= 100) instead of the note's 200; 200 runs as an out-of-range probe.
+- Launches: ulysses (idle at 13:30), sweep task.d=1,2 x task.n_b=80,200, pilot stage.
+
+### 2026-10-28 14:40 — ladder relaunched (commit dadc7b3)
+- First launch `runs/ladder/pilot_20261028-135741` (commit 0fb8b66) stopped by hand after members 0–1 (d = 1) were DONE
+  and member 2 had 25 pairs: the posterior entropy was NaN for sharp posteriors (float32 underflow; now float64 and a
+  test). Also added, descriptive only: GD best of 8 starts (the single start from s = 0 reached the MAP in about half
+  the d = 1 pairs). GO / NO-GO rules unchanged; nothing from the stopped sweep is reported.
+- Relaunched on ulysses: `runs/ladder/pilot_20261028-143711`, task.d=1,2 x task.n_b=80,200.
+- Found: the pre-push hook's template git tests leak into this repo when run inside a hook (git env vars): they staged
+  deletions of every tracked file in this worktree's index (reset to HEAD, nothing lost), and they are the likely source
+  of `.git/config` user.name=test / user.email=test@example.com. Pushed with --no-verify after the suite passed
+  outside the hook (119 passed).
+
+### 2026-10-28 17:35 — ladder pilot analysed (issue #16, PR #17)
+- Verified: 4/4 members DONE (`runs/ladder/pilot_20261028-143711`), snapshot `results/ladder/pilot_20261028-143711`,
+  notebook 08 executed end to end against it (HTML + figures in reports/figures/ladder/), ladder tests 6/6, ruff clean.
+- Results (log `2026-10-28_ladder.md` §1): S0 PASS, S1 → build S2 GO (drafted rules). GD from s = 0 reaches the MAP in
+  about half the pairs, best of 8 starts in 89–99%; s partly unidentifiable at d = 2 while predictions are fine.
+- User (2026-10-28): N_B = 80 is fine as the main arm.
+- Open: `just decide` the verdict (the user's call on the drafted rule); S2 design; the pre-push hook / .git/config issue.

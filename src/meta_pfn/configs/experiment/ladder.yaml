@@ -1,0 +1,6 @@
+# @package _global_
+# S0/S1 sanity ladder: oracle query path and non-amortised shift ceiling (A→B architecture, issue #16).
+# Frozen pfn_large, no training. Pre-registration: notebooks/08_*_ladder.ipynb. One member per (d, N_B):
+# task.d=1,2 task.n_b=80,200 (200 = out-of-range probe)
+defaults:
+  - override /task: ladder
