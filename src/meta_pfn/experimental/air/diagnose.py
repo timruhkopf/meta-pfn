@@ -7,9 +7,11 @@ Table `pfail` (long: J, n_a, task, metric, value):
 - B, all J, K scan: `nll_qis{K}`, `ess_qis{K}`; on one set of K_ess draws, `ess_exact` (exact dense-B evidence) and
   `ess_perm8` (decoder evidence over 8 orders of A), with `nll_exact_q` (exact weights and predictives).
 - C, J = 2, fine local grid (cells far below the posterior width): `kl_exact_q`, `kl_dec_q`, `kl_exact_dec`, and
-  the posterior widths `w_exact`, `w_dec`, `w_q` (det(cov)^(1/4)), with `w_grid_cell` for the 101² cell width.
+  the posterior widths `w_exact`, `w_dec`, `w_q` (det(cov)^(1/4)), with `w_grid_cell` for the 101² cell width;
+  `kl_exact_dec_clean`, `w_dec_clean`: the decoder given noise-free B values (same 128 x).
 """
 
+import dataclasses
 import math
 import time
 
@@ -117,5 +119,13 @@ def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, 
                 add(2, n, i, "w_dec", _width(pd_, pts))
                 add(2, n, i, "w_q", _width(lq.exp() / lq.exp().sum(), pts))
                 add(2, n, i, "w_grid_cell", 0.08)
+                clean = dataclasses.replace(
+                    ti, yb=ti.g(ti.xb)
+                )  # B without noise: the finite-B share of the decoder gap
+                ev_c, _, _ = decode(dec, clean, pts[None], n_perm=2)
+                lc = log_prior(pts) + ev_c[0]
+                lc = lc - torch.logsumexp(lc, 0)
+                add(2, n, i, "kl_exact_dec_clean", (pe * (le - lc)).sum())
+                add(2, n, i, "w_dec_clean", _width(lc.exp(), pts))
             log(f"C n_a={n} {time.time() - t0:.0f}s")
     return pd.DataFrame(rows)
