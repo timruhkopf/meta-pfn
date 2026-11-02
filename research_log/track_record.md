@@ -131,3 +131,14 @@ with deliverables and open questions.
   before the relaunch.
 - User preferences recorded: low-rank K/V residual on top-k attended B tokens for local correction (next round, with
   cache targets KV(B | B ∪ A_inB) − KV(B | B)).
+
+### 2026-11-02 — Derivation note: generative model → inference tree (docs/derivation_2026-11-02_inference_tree.md)
+- User asked to add to the research log a derivation of the inference model from the generative one (written in a
+  separate chat; pasted verbatim): root mixture over related/unrelated (E0, E1), single-task branch (E2), related
+  branch routes α (τ outermost, chain-rule evidence) and β (function outermost), τ split with an analytic affine h,
+  leaves, branch points (noise placement, residual, unknown σ), next tests.
+- Appended a mapping onto this repo, checked against the code: ⚠1 holds (unrelated stratum gives B the fresh function);
+  ⚠2 differs (pfn-repro's BNN prior adds noise before the ECDF, and a2b applies h after it: non-Gaussian leaves, exact
+  B-domain pooling with the Jacobian); ⚠3 holds (no residual), consistent with S1's near-delta posteriors and the
+  K/V pre-check (A-in-context gain 0.01–0.04 nats). Nodes already implemented: E0/E1 (bayes_null, null particle),
+  E2 (A-only PFN), E3.1-3.2 (grid_exact), E3.3 (teacher_b, context); route β and the analytic affine h are not.
