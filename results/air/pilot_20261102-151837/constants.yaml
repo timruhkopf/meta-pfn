@@ -1,0 +1,21 @@
+seed: 0
+task.batch: 128
+task.decoder_ckpt: ''
+task.device: cuda
+task.dm: 128
+task.eval_seed: 777
+task.every: 250
+task.fid_tasks: 32
+task.h_kind: id
+task.j_mix: '[2, 4, 8, 16]'
+task.k_exact: 10000
+task.k_ref: 4096
+task.ks: '[8, 32, 128]'
+task.layers: 6
+task.lr: 0.0003
+task.mode: proposal
+task.n_eval: 128
+task.name: air
+task.proposal_ckpts: ''
+task.steps: 20000
+task.threads: 4

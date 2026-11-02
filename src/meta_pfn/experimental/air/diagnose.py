@@ -119,9 +119,7 @@ def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, 
                 add(2, n, i, "w_dec", _width(pd_, pts))
                 add(2, n, i, "w_q", _width(lq.exp() / lq.exp().sum(), pts))
                 add(2, n, i, "w_grid_cell", 0.08)
-                clean = dataclasses.replace(
-                    ti, yb=ti.g(ti.xb)
-                )  # B without noise: the finite-B share of the decoder gap
+                clean = dataclasses.replace(ti, yb=ti.g(ti.xb))  # noise-free B: the finite-B share
                 ev_c, _, _ = decode(dec, clean, pts[None], n_perm=2)
                 lc = log_prior(pts) + ev_c[0]
                 lc = lc - torch.logsumexp(lc, 0)

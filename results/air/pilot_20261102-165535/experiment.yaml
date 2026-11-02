@@ -1,0 +1,6 @@
+# @package _global_
+# AIR (issue #19): amortised importance sampling over an explicit transform latent; registration proposal 2026-11-02.
+# Pre-registration: notebooks/10_*_air.ipynb (the spec's V0–V5 pass criteria). Stages: task.mode=decoder;
+# task.mode=proposal task.J=2,4,8,16 task.batch=128; task.mode=eval (checkpoint paths as overrides).
+defaults:
+  - override /task: air

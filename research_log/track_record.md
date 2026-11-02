@@ -152,3 +152,11 @@ with deliverables and open questions.
   masks, zuko NSF proposal by NPE, IS estimator, G-ref / IS-exact references), tasks/air.py (modes decoder / proposal /
   eval), tests 6/6 (incl. no leakage into the chain-rule evidence). zuko 1.6.0 added via uv. Notebook 10 description
   with the spec's V0–V5 criteria and the deviations, written before the first run.
+
+### 2026-11-02 19:40 — AIR pilot finished; failures investigated (issue #19, session 8ce7cc8e took over from the weekend session)
+- Mandate extended by the user: follow the design, run it, deliver the standalone notebook; if the idea does not deliver, investigate why and report completely.
+- Launched after the user's explicit go. Decoder and proposals DONE 16:21, evaluation DONE 16:51, diagnostics and 60k proposals DONE by about 19:15. No failed members.
+- Pre-registered result (`results/air/pilot_20261102-162127`): V0, V1.1 pass; V1.2, V1.3, V2, V3, V4, V5 fail. Proposed NO-GO as registered; not decided (the user runs `decide`).
+- Post hoc causes, with evidence, in notebook 10 and the log entry: underfit proposal, K = 32 too small, decoder floor 0.07–0.09 + evidence 0.01–0.08. Open: the 0.28 remainder at n_A = 1.
+- Correction: my mid-run statements that finite K was the main cause and that KL worsens on a fine grid were wrong; finite K is partial, and KL(‖q) is unchanged on the fine grid.
+- Added `task.mode=diagnose` (experimental/air/diagnose.py). Deliverables: notebook 10 (outputs stripped on commit), `reports/figures/air/10_air_report.html`.

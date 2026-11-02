@@ -1,0 +1,2 @@
+{"member": 0, "overrides": ["experiment=air", "task.mode=proposal", "task.J=2", "task.batch=128", "task.steps=60000"]}
+{"member": 1, "overrides": ["experiment=air", "task.mode=proposal", "task.J=16", "task.batch=128", "task.steps=60000"]}
