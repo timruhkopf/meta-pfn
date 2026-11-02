@@ -25,3 +25,4 @@ GWONLY_FRAC_N5 = "final/frac_005_n5"  # gwonly: share of covered A points (C10, 
 METAPFN_GAIN_N5 = "final/gain_n5"  # metapfn: NLL(A-only PFN) - NLL(model) at n_A = 5, mean over the 4 related cells
 LADDER_S0_GAIN_N2 = "final/s0_gain_n2"  # ladder: NLL(a_only) - NLL(oracle_q), shift stratum, n_A = 2
 A2B_NLL_N5 = "final/nll_n5"  # a2b: model mixture NLL on A queries, warp stratum, n_A = 5, last step
+AIR_SCORE = "final/score"  # air: decoder val NLL (teacher, n_A=5) | proposal val NLL | eval q-IS32 NLL (J min, n_A=5)

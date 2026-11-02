@@ -142,3 +142,13 @@ with deliverables and open questions.
   B-domain pooling with the Jacobian); ⚠3 holds (no residual), consistent with S1's near-delta posteriors and the
   K/V pre-check (A-in-context gain 0.01–0.04 nats). Nodes already implemented: E0/E1 (bayes_null, null particle),
   E2 (A-only PFN), E3.1-3.2 (grid_exact), E3.3 (teacher_b, context); route β and the analytic affine h are not.
+
+### 2026-11-02 15:30 — AIR: registration proposal implemented, overnight run (issue #19, branch exp/19-a2b-air)
+- Mandate (user, 2026-11-02): log the a2b Bayes tree (2026-10-29) and the registration proposal (2026-11-02) from
+  Downloads (now docs/a2b_bayes_tree_2026-10-29.md, docs/a2b_registration_proposal_2026-11-02.md); new branch;
+  implement the registration proposal; run it overnight; report + standalone analysis notebook by the next morning.
+  Hourly self-check cron (session job 6a5c2290) at the user's request.
+- Built experimental/air (prior with the box-preserving flow, transported decoder with null head and causal evidence
+  masks, zuko NSF proposal by NPE, IS estimator, G-ref / IS-exact references), tasks/air.py (modes decoder / proposal /
+  eval), tests 6/6 (incl. no leakage into the chain-rule evidence). zuko 1.6.0 added via uv. Notebook 10 description
+  with the spec's V0–V5 criteria and the deviations, written before the first run.

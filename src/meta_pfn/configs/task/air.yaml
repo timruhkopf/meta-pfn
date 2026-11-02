@@ -1,0 +1,23 @@
+# AIR: amortised importance sampling over an explicit transform latent (tasks/air.py; issue #19, notebook 10).
+# Spec: docs/a2b_registration_proposal_2026-11-02.md. Prior §1 (2-layer tanh MLP g, N_B = 128, noise C2', H0, Z0).
+name: air
+mode: decoder           # decoder | proposal | eval
+h_kind: id              # H0
+J: 2                    # proposal: transform dimension
+j_mix: [2, 4, 8, 16]    # decoder: J per batch drawn from this list (the decoder sees θ only through B_inA)
+dm: 128                 # decoder width (spec: 6 layers, d_model 128, 4 heads)
+layers: 6
+steps: 20000            # decoder: 20k × 64 = 1.28M tasks (spec: ~200k or until plateau); proposal: 20k × 128
+batch: 64
+lr: 3e-4
+every: 250
+decoder_ckpt: ""        # eval
+proposal_ckpts: ""      # eval: "2:path,4:path,..."
+n_eval: 128             # evaluation tasks per (J, n_A); spec 256 (halved for the overnight budget)
+ks: [8, 32, 128]
+k_ref: 4096             # IS-ref (prior IS) draws, J = 2; spec 8192
+k_exact: 10000          # IS-exact (dense-B) draws with q_mix, J > 2
+fid_tasks: 32           # evidence fidelity / permutation spread: tasks per n_A (J = 2)
+eval_seed: 777
+device: cuda
+threads: 4
