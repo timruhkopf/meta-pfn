@@ -1,0 +1,1 @@
+{"member": 0, "overrides": ["experiment=mtpfn", "task.mode=air_diag", "task.prior=air", "task.dm=128", "seed=1", "task.ckpts=mtpfn:/home/ruhkopf/PycharmProjects/meta-pfn-mtpfn/runs/mtpfn/pilot_20261103-132611/1/tracking/artifacts/model.pt", "task.aonly_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-114539/1/tracking/artifacts/model.pt"]}

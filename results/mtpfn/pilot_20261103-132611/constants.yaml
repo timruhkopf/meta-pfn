@@ -1,39 +1,39 @@
 name: mtpfn
 task.ard: false
-task.batch: 64.0
+task.batch: 64
 task.ckpts: ''
 task.clip: 1.0
-task.d_ff: 512.0
-task.d_max: 3.0
+task.d_ff: 512
+task.d_max: 3
 task.device: cuda
 task.dm: 128
 task.eval_d: '[1, 3]'
 task.eval_j: '[2, 16]'
 task.eval_n_target: '[1, 2, 5, 10]'
-task.eval_seed: 777.0
-task.every: 500.0
+task.eval_seed: 777
+task.every: 500
 task.g_norm: ecdf
 task.head: bar
-task.heads: 4.0
+task.heads: 4
 task.j_mix: '[2, 4, 8, 16]'
-task.k_ref: 1024.0
+task.k_ref: 1024
 task.lr: 0.0001
 task.mode: air_train
-task.n_bins: 400.0
-task.n_eval: 128.0
-task.n_pairs: 4.0
+task.n_bins: 400
+task.n_eval: 128
+task.n_pairs: 4
 task.n_range: '[10, 100]'
-task.n_src: 20.0
+task.n_src: 20
 task.name: mtpfn
 task.p: 0.2
 task.p_ref: 0.2
 task.prior: air
-task.q: 32.0
-task.q_eval: 50.0
-task.steps: 100000.0
-task.t_eval: 4.0
+task.q: 32
+task.q_eval: 50
+task.steps: 100000
+task.t_eval: 4
 task.t_range: '[2, 5]'
-task.threads: 4.0
-task.warmup: 1000.0
+task.threads: 4
+task.warmup: 1000
 task.y_hi: 5.0
 task.y_lo: -5.0

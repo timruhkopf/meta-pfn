@@ -22,14 +22,12 @@
   "meta-pfn": "7b8bfd279e967f03059f59577b3c9f8d3ff8a631"
  },
  "status_counts": {
-  "DONE": 1,
-  "STARTED": 1,
-  "MISSING": 1
+  "DONE": 3
  },
  "first_start": "2026-11-03T13:26:15",
- "last_end": "2026-11-03T16:09:19",
- "wall_h": 2.212,
+ "last_end": "2026-11-03T22:02:52",
+ "wall_h": 8.059,
  "device_h": 0.0,
- "snapshot_created": "2026-11-03T16:34:52",
+ "snapshot_created": "2026-11-03T22:05:26",
  "sweep_dir": "runs/mtpfn/pilot_20261103-132611"
 }
