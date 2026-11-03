@@ -4,6 +4,7 @@ docs/a2b_registration_proposal_2026-11-02.md). One member = one mode:
 - `proposal`: train q_φ for task.J; artifact model.pt; table `train`;
 - `eval`: load the decoder (task.decoder_ckpt) and the proposals (task.proposal_ckpts, "J:path,J:path"), run the V0–V5
   evaluation; tables `nll`, `diag`, `prior` (V0: T calibration);
+- `chain_eval`: proposal v2 (c), chain + Laplace mixture, vs pilot 3's flow q (experimental/air/chain.py; #21);
 - `diagnose`: post hoc failure analysis on the same checkpoints; table `pfail` (experimental/air/diagnose.py).
 """
 
@@ -78,6 +79,24 @@ def air(cfg: DictConfig, run: Run) -> float:
         run.log_table("nll", nll)
         run.log_table("diag", diag)
         m = nll[(min(props) == nll.J) & (nll.n_a == 5) & (nll.sig == 0) & (nll.method == "qis32")]
+        score = float(m.nll.mean())
+    elif t.mode == "chain_eval":  # proposal v2 (c) vs pilot 3's flow q (issue #21, notebook 14)
+        from ..experimental.air.chain import evaluate_chain
+
+        dec = Decoder(D=t.dm, layers=t.layers, sig_cond=True).to(dev)
+        dec.load_state_dict(torch.load(t.decoder_ckpt, map_location=dev))
+        props = {}
+        for item in str(t.proposal_ckpts).split(","):
+            J, path = item.split(":", 1)
+            q = Proposal(int(J), sig_cond=True).to(dev)
+            q.load_state_dict(torch.load(path, map_location=dev))
+            props[int(J)] = q
+        nll, diag, info = evaluate_chain(dec, props, dev, n_tasks=t.n_eval, seed=t.eval_seed, g_norm=t.g_norm,
+                                         M=t.chain_m, log=log)  # fmt: skip
+        run.log_table("nll", nll)
+        run.log_table("diag", diag)
+        run.log_table("task_info", info)
+        m = nll[(min(props) == nll.J) & (nll.n_a == 5) & (nll.method == "chain_gp_K32")]
         score = float(m.nll.mean())
     elif t.mode in ("eval", "diagnose"):
         dec = Decoder(D=t.dm, layers=t.layers).to(dev)

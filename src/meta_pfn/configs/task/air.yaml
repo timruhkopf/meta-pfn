@@ -29,3 +29,4 @@ max_steps: 100000       # cap of the plateau rule
 clip_d: 1.0             # decoder / A-only gradient clip
 clip_q: 20.0            # proposal gradient clip (pilot 1: 1.0, which shrank every step 6-36x)
 aonly_ckpt: ""          # eval_rb: the clean A-only PFN
+chain_m: 128            # chain_eval (#21): correspondence sets per task
