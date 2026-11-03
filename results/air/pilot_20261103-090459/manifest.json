@@ -1,0 +1,29 @@
+{
+ "id": "pilot_20261103-090459",
+ "experiment": "air",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=air task.mode=decoder task.g_norm=ecdf",
+ "overrides": [
+  "experiment=air",
+  "task.mode=decoder",
+  "task.g_norm=ecdf"
+ ],
+ "backend": "detached",
+ "commit": "f3868644b1a310df01ff782292c8f4f88caf2c77",
+ "branch": "HEAD",
+ "tag": "sweep/air/pilot_20261103-090459",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-11-03T09:04:59",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 1
+ },
+ "first_start": "2026-11-03T09:05:01",
+ "last_end": "2026-11-03T09:35:34",
+ "wall_h": 0.509,
+ "device_h": 0.0,
+ "snapshot_created": "2026-11-03T11:45:57",
+ "sweep_dir": "runs/air/pilot_20261103-090459"
+}

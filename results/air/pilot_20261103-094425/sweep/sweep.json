@@ -1,0 +1,24 @@
+{
+ "id": "pilot_20261103-094425",
+ "experiment": "air",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=air task.mode=proposal task.J=2,4,8,16 task.batch=128 task.g_norm=ecdf",
+ "overrides": [
+  "experiment=air",
+  "task.mode=proposal",
+  "task.J=2,4,8,16",
+  "task.batch=128",
+  "task.g_norm=ecdf"
+ ],
+ "backend": "detached",
+ "commit": "d3714549a0d277503d9ac6e529b33a34283184a6",
+ "branch": "HEAD",
+ "tag": "sweep/air/pilot_20261103-094425",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ulysses",
+ "created": "2026-11-03T09:44:25",
+ "n_members": 4
+}

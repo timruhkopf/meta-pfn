@@ -7896,13 +7896,36 @@ G-ref is a floor, not a target.</li>
 </div>
 </div>
 </div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=p2">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Pilot-2-pre-registration:-ECDF-normalised-prior-(written-2026-11-03,-before-its-first-run)">Pilot 2 pre-registration: ECDF-normalised prior (written 2026-11-03, before its first run)<a class="anchor-link" href="#Pilot-2-pre-registration:-ECDF-normalised-prior-(written-2026-11-03,-before-its-first-run)">¶</a></h2><p><strong>Why.</strong> In pilot 1, each g was min–max normalised on its own, so every function attained exactly 0 and 1. That makes the edges unusually informative
+(80 % of prior mass at x = 0 lies in y &lt; 0.2 or y &gt; 0.8), and an ideal learner exploits it (review questions below). Pilot 2 uses the repo's standard
+instead, as in pfn-repro's BNN prior: one global ECDF of raw MLP outputs, pooled over 4000 prior draws at uniform x, applied identically to every
+function (<code>task.g_norm=ecdf</code>, <code>prior.prior_ecdf</code>).</p>
+<p><strong>What changes in the prior.</strong> The value distribution at x = 0, 0.5 and 1 is uniform (about 0.2 per fifth); only about 5 % of functions reach above 0.98. A function's
+max still sits at an endpoint in 52 % of draws, because a monotone map leaves its shape, and so the argmax position, unchanged. The median function range
+shrinks from 1 to 0.25 of the scale, while the noise (σ ∈ [0.005, 0.03]) is unchanged. So pilot 2 has a lower signal-to-noise ratio and is expected to
+be harder for registration than pilot 1.</p>
+<p><strong>Setup.</strong> Everything else is a replication of pilot 1: same code paths, configs, seeds, step counts (decoder 20k, proposals 20k per J), evaluation tasks
+(drawn under the new prior) and references.</p>
+<p><strong>Criteria.</strong> The V0–V5 pass criteria above, unchanged. Also reported: the pilot-1 vs pilot-2 difference in each criterion, with the expectation that
+absolute NLLs are not comparable across the two priors (different y distributions); gaps to references and ESS are.</p>
+</div>
+</div>
+</div>
+</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=r0">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Report-(read-this-first)">Report (read this first)<a class="anchor-link" href="#Report-(read-this-first)">¶</a></h2><p><strong>Result.</strong> Transfer works and the estimator behaves as the theory says, but the pilot <strong>fails the pre-registered
+<h2 id="Report-(read-this-first)">Report (read this first)<a class="anchor-link" href="#Report-(read-this-first)">¶</a></h2><p><strong>Pilot 2</strong> (ECDF prior) results are in the last section.</p>
+<p><strong>Result.</strong> Transfer works and the estimator behaves as the theory says, but the pilot <strong>fails the pre-registered
 criteria as written</strong>: V1.2, V1.3, V2 (narrowly), V3 (KL, and coverage narrowly), V4 and V5 fail; V0 and V1.1 pass. The largest failures
 are not a flaw in the idea. They come from an underfit proposal, a budget of K = 32 that is too small for sharp
 predictives, and a decoder term of about 0.1–0.15 nats.</p>
@@ -8478,9 +8501,9 @@ All sweeps ended DONE: 1 decoder, 4 + 2 proposals, 2 eval, 2 diagnose; 0 failed 
         <span class="p">((</span><span class="n">gr</span><span class="o">.</span><span class="n">grid</span> <span class="o">&lt;</span> <span class="n">gr</span><span class="o">.</span><span class="n">a_only</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">gr</span><span class="o">.</span><span class="n">grid</span> <span class="o">&gt;</span> <span class="n">gr</span><span class="o">.</span><span class="n">teacher</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
     <span class="n">tm</span> <span class="o">=</span> <span class="n">gr</span><span class="o">.</span><span class="n">teacher</span>
     <span class="n">add</span><span class="p">(</span><span class="s2">"V1.1"</span><span class="p">,</span> <span class="s2">"teacher improves with n_A"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">tm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">tm</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">tm</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
-    <span class="n">e</span> <span class="o">=</span> <span class="n">med</span><span class="p">(</span><span class="n">diag</span><span class="p">,</span> <span class="s2">"evid_kl"</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">med</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">"evid_kl"</span><span class="p">)</span>
     <span class="n">add</span><span class="p">(</span><span class="s2">"V1.2"</span><span class="p">,</span> <span class="s2">"median evidence KL &lt; 0.1 at every n_A"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">dropna</span><span class="p">()),</span> <span class="n">e</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span><span class="mf">.1</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">med</span><span class="p">(</span><span class="n">diag</span><span class="p">,</span> <span class="s2">"perm_std"</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">med</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">"perm_std"</span><span class="p">)</span>
     <span class="n">add</span><span class="p">(</span><span class="s2">"V1.3"</span><span class="p">,</span> <span class="s2">"median permutation spread &lt; 0.05"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">dropna</span><span class="p">()),</span> <span class="n">s</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">lt</span><span class="p">(</span><span class="mf">.05</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
     <span class="n">g</span> <span class="o">=</span> <span class="n">gap</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s2">"isref"</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">)[</span><span class="s2">"mean"</span><span class="p">]</span>
     <span class="n">add</span><span class="p">(</span><span class="s2">"V2"</span><span class="p">,</span> <span class="s2">"IS-ref - G-ref &lt;= 0.12 at every n_A"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">g</span><span class="p">),</span> <span class="n">g</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="mf">.12</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
@@ -9579,6 +9602,519 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 </div>
 </div>
 </div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=p2r0">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Pilot-2:-ECDF-normalised-prior-(results)">Pilot 2: ECDF-normalised prior (results)<a class="anchor-link" href="#Pilot-2:-ECDF-normalised-prior-(results)">¶</a></h2><p>Sweeps, all DONE: decoder <code>pilot_20261103-090459</code>, proposals <code>pilot_20261103-094425</code> (J = 2, 4, 8, 16; 20k steps each), evaluation
+<code>pilot_20261103-104807</code>. An earlier proposal sweep, <code>pilot_20261103-090502</code>, trained under min–max by mistake (a bug, now fixed and tested); it was
+killed and is not used. Same code, settings and criteria as pilot 1; only the prior's normalisation differs.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=p2r1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">SN</span><span class="p">[</span><span class="s2">"eval_p2"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"pilot_20261103-104807"</span>
+<span class="n">n2</span><span class="p">,</span> <span class="n">d2</span> <span class="o">=</span> <span class="n">tab</span><span class="p">(</span><span class="s2">"eval_p2"</span><span class="p">,</span> <span class="s2">"nll"</span><span class="p">),</span> <span class="n">tab</span><span class="p">(</span><span class="s2">"eval_p2"</span><span class="p">,</span> <span class="s2">"diag"</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">rows</span><span class="p">(</span><span class="n">nll</span><span class="p">,</span> <span class="n">diag</span><span class="p">,</span> <span class="s2">"pilot 1"</span><span class="p">),</span> <span class="n">rows</span><span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="n">d2</span><span class="p">,</span> <span class="s2">"pilot 2"</span><span class="p">)])</span>
+<span class="n">display</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">pivot_table</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"stage"</span><span class="p">,</span> <span class="s2">"criterion"</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="s2">"proposal"</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="s2">"measured"</span><span class="p">,</span> <span class="s2">"pass"</span><span class="p">],</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s2">"first"</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Pilot 2, J = 2, mean NLL:"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">wide</span><span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"n_a"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()[[</span><span class="s2">"a_only"</span><span class="p">,</span> <span class="s2">"qis32"</span><span class="p">,</span> <span class="s2">"qis128"</span><span class="p">,</span> <span class="s2">"isref"</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">,</span> <span class="s2">"teacher"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Pilot 2, J = 16, mean NLL:"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">wide</span><span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"n_a"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()[[</span><span class="s2">"a_only"</span><span class="p">,</span> <span class="s2">"qis32"</span><span class="p">,</span> <span class="s2">"qis128"</span><span class="p">,</span> <span class="s2">"isexact"</span><span class="p">,</span> <span class="s2">"teacher"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"IS-exact median ESS, J = 16:"</span><span class="p">,</span> <span class="n">med</span><span class="p">(</span><span class="n">d2</span><span class="p">,</span> <span class="s2">"ess_isexact"</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Median |T_s(x*) - T(x*)|, J = 2 (pilot 1 -&gt; pilot 2):"</span><span class="p">,</span> <span class="n">med</span><span class="p">(</span><span class="n">diag</span><span class="p">,</span> <span class="s2">"t_err"</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">med</span><span class="p">(</span><span class="n">d2</span><span class="p">,</span> <span class="s2">"t_err"</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+<span class="n">fe</span> <span class="o">=</span> <span class="n">draw_funcs</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="s2">"cpu"</span><span class="p">,</span> <span class="s2">"ecdf"</span><span class="p">)</span>
+<span class="n">ve</span> <span class="o">=</span> <span class="n">fe</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">)[</span><span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"ECDF prior: P(max at an endpoint) ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">at_end</span><span class="p">(</span><span class="n">ve</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()),</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="s2">"| P(reaches &gt; 0.98) ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">((</span><span class="n">ve</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span> <span class="o">&gt;</span> <span class="mf">0.98</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()),</span> <span class="mi">3</span><span class="p">),</span>
+      <span class="s2">"| median range ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">((</span><span class="n">ve</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">ve</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">median</span><span class="p">()),</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># fmt: skip</span>
+<span class="n">display</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">lab</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">ve</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">bins</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">20000</span> <span class="k">for</span> <span class="n">lab</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span>
+                      <span class="p">[(</span><span class="s2">"x = 0"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="s2">"x = 0.5"</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="p">(</span><span class="s2">"x = 1"</span><span class="p">,</span> <span class="mi">255</span><span class="p">)]},</span>
+                     <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"y in [0, .2)"</span><span class="p">,</span> <span class="s2">"[.2, .4)"</span><span class="p">,</span> <span class="s2">"[.4, .6)"</span><span class="p">,</span> <span class="s2">"[.6, .8)"</span><span class="p">,</span> <span class="s2">"[.8, 1]"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>  <span class="c1"># fmt: skip</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead tr th {
+        text-align: left;
+    }
+
+    .dataframe thead tr:last-of-type th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th colspan="2" halign="left">measured</th>
+<th colspan="2" halign="left">pass</th>
+</tr>
+<tr>
+<th></th>
+<th>proposal</th>
+<th>pilot 1</th>
+<th>pilot 2</th>
+<th>pilot 1</th>
+<th>pilot 2</th>
+</tr>
+<tr>
+<th>stage</th>
+<th>criterion</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>V0</th>
+<th>G-ref between A-only and teacher</th>
+<td>n_A=1: -0.38 &gt; -1.48 &gt; -2.56</td>
+<td>n_A=1: -0.79 &gt; -2.14 &gt; -2.57</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<th>V1.1</th>
+<th>teacher improves with n_A</th>
+<td>-2.557 -&gt; -2.588</td>
+<td>-2.571 -&gt; -2.585</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>V1.2</th>
+<th>median evidence KL &lt; 0.1 at every n_A</th>
+<td>0.11, 0.29, 0.29, 0.23</td>
+<td>0.09, 0.21, 0.28, 0.34</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th>V1.3</th>
+<th>median permutation spread &lt; 0.05</th>
+<td>0.000, 0.011, 0.085, 0.150</td>
+<td>0.000, 0.002, 0.018, 0.068</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th>V2</th>
+<th>IS-ref - G-ref &lt;= 0.12 at every n_A</th>
+<td>0.095, 0.159, 0.144, 0.118, 0.116, 0.091</td>
+<td>0.138, 0.164, 0.175, 0.179, 0.194, 0.200</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th rowspan="3" valign="top">V3</th>
+<th>HPD 50/90 within +-5 points</th>
+<td>50: 0.477-0.562; 90: 0.883-0.930</td>
+<td>50: 0.430-0.539; 90: 0.906-0.945</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th>SBC KS p &gt; 0.01 (J=2)</th>
+<td>min p = 0.104</td>
+<td>min p = 0.087</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>median KL(grid||q) &lt; 0.2</th>
+<td>0.29, 0.60, 0.75, 0.80, 0.86, 0.87</td>
+<td>0.13, 0.23, 0.31, 0.40, 0.55, 0.50</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th rowspan="3" valign="top">V4</th>
+<th>ESS/K &gt;= 0.3 (K=32)</th>
+<td>min over n_A 0.42</td>
+<td>min over n_A 0.55</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<th>q-IS32 - IS-ref &lt;= 0.03</th>
+<td>0.355, 0.151, 0.174, 0.067, 0.021, 0.062</td>
+<td>0.047, 0.015, 0.026, 0.010, 0.008, 0.011</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th>total gap to G-ref &lt;= 0.15</th>
+<td>0.450, 0.310, 0.318, 0.185, 0.137, 0.152</td>
+<td>0.185, 0.180, 0.201, 0.189, 0.203, 0.211</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<th rowspan="2" valign="top">V5</th>
+<th>ESS/K of q-IS &gt;= 0.2 at J=16 (K=32)</th>
+<td>0.50, 0.33, 0.24, 0.17, 0.11, 0.10</td>
+<td>0.69, 0.56, 0.47, 0.38, 0.28, 0.23</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr>
+<th>gap growth J=2 -&gt; 16 &lt;= 0.05 (trusted n_A: IS-exact ESS &gt; 500)</th>
+<td>n=1: -0.05, n=2: +0.12, n=3: +0.10</td>
+<td>n=1: -0.00, n=2: +0.02, n=3: +0.01, n=5: +0.01, n=8: -0.01, n=10: -0.00</td>
+<td>False</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Pilot 2, J = 2, mean NLL:
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>method</th>
+<th>a_only</th>
+<th>qis32</th>
+<th>qis128</th>
+<th>isref</th>
+<th>grid</th>
+<th>teacher</th>
+</tr>
+<tr>
+<th>n_a</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>1</th>
+<td>-0.788</td>
+<td>-1.954</td>
+<td>-1.985</td>
+<td>-2.001</td>
+<td>-2.139</td>
+<td>-2.571</td>
+</tr>
+<tr>
+<th>2</th>
+<td>-1.286</td>
+<td>-2.142</td>
+<td>-2.144</td>
+<td>-2.158</td>
+<td>-2.322</td>
+<td>-2.575</td>
+</tr>
+<tr>
+<th>3</th>
+<td>-1.555</td>
+<td>-2.198</td>
+<td>-2.216</td>
+<td>-2.224</td>
+<td>-2.399</td>
+<td>-2.576</td>
+</tr>
+<tr>
+<th>5</th>
+<td>-1.877</td>
+<td>-2.328</td>
+<td>-2.334</td>
+<td>-2.337</td>
+<td>-2.516</td>
+<td>-2.578</td>
+</tr>
+<tr>
+<th>8</th>
+<td>-2.121</td>
+<td>-2.441</td>
+<td>-2.444</td>
+<td>-2.450</td>
+<td>-2.644</td>
+<td>-2.582</td>
+</tr>
+<tr>
+<th>10</th>
+<td>-2.195</td>
+<td>-2.476</td>
+<td>-2.484</td>
+<td>-2.487</td>
+<td>-2.687</td>
+<td>-2.585</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Pilot 2, J = 16, mean NLL:
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>method</th>
+<th>a_only</th>
+<th>qis32</th>
+<th>qis128</th>
+<th>isexact</th>
+<th>teacher</th>
+</tr>
+<tr>
+<th>n_a</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>1</th>
+<td>-0.915</td>
+<td>-1.865</td>
+<td>-1.925</td>
+<td>-2.046</td>
+<td>-2.474</td>
+</tr>
+<tr>
+<th>2</th>
+<td>-1.328</td>
+<td>-1.964</td>
+<td>-2.024</td>
+<td>-2.167</td>
+<td>-2.475</td>
+</tr>
+<tr>
+<th>3</th>
+<td>-1.609</td>
+<td>-2.041</td>
+<td>-2.106</td>
+<td>-2.249</td>
+<td>-2.477</td>
+</tr>
+<tr>
+<th>5</th>
+<td>-1.888</td>
+<td>-2.129</td>
+<td>-2.194</td>
+<td>-2.331</td>
+<td>-2.487</td>
+</tr>
+<tr>
+<th>8</th>
+<td>-2.080</td>
+<td>-2.195</td>
+<td>-2.242</td>
+<td>-2.391</td>
+<td>-2.493</td>
+</tr>
+<tr>
+<th>10</th>
+<td>-2.157</td>
+<td>-2.209</td>
+<td>-2.251</td>
+<td>-2.417</td>
+<td>-2.494</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>IS-exact median ESS, J = 16: {1: 6634.0, 2: 4640.0, 3: 3410.0, 5: 1932.0, 8: 1072.0, 10: 874.0}
+Median |T_s(x*) - T(x*)|, J = 2 (pilot 1 -&gt; pilot 2): {1: 0.085, 2: 0.06, 3: 0.047, 5: 0.027, 8: 0.016, 10: 0.013} {1: 0.124, 2: 0.085, 3: 0.074, 5: 0.054, 8: 0.045, 10: 0.041}
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>ECDF prior: P(max at an endpoint) = 0.525 | P(reaches &gt; 0.98) = 0.045 | median range = 0.252
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>x = 0</th>
+<th>x = 0.5</th>
+<th>x = 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>y in [0, .2)</th>
+<td>0.194</td>
+<td>0.195</td>
+<td>0.203</td>
+</tr>
+<tr>
+<th>[.2, .4)</th>
+<td>0.210</td>
+<td>0.206</td>
+<td>0.206</td>
+</tr>
+<tr>
+<th>[.4, .6)</th>
+<td>0.204</td>
+<td>0.207</td>
+<td>0.200</td>
+</tr>
+<tr>
+<th>[.6, .8)</th>
+<td>0.195</td>
+<td>0.198</td>
+<td>0.190</td>
+</tr>
+<tr>
+<th>[.8, 1]</th>
+<td>0.197</td>
+<td>0.194</td>
+<td>0.202</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=p2r2">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>Reading pilot 2 (proposed, not decided).</strong> As pre-registered, pilot 2 also fails: V0, V1.2, V1.3, V2, V3 (coverage and KL) and V4 (two of three
+criteria) fail; V1.1, SBC, V4's ESS and <strong>both V5 criteria pass</strong>. Compared with pilot 1:</p>
+<ul>
+<li><p><strong>The edge leak is gone.</strong> Values at x = 0 and 1 are distributed like those at x = 0.5.</p>
+</li>
+<li><p><strong>The proposal side improves sharply:</strong></p>
+<ul>
+<li>q-IS(32) − IS-ref falls to 0.008–0.047 (0.021–0.355 in pilot 1);</li>
+<li>J = 16 ESS/K at K = 32 is ≥ 0.23 at every n_A;</li>
+<li>the gap to IS-exact no longer grows with J.</li>
+</ul>
+<p>The posterior over θ is wider here (|T̂ − T| of 0.04 at n_A = 10 vs 0.013 in pilot 1), so q's job is easier and a few draws cover it. This is not
+q getting better at the same task.</p>
+</li>
+<li><p><strong>The decoder-and-finite-B side gets worse:</strong> IS-ref − G-ref is 0.14–0.20. With functions spanning about a quarter of the scale, 128 noisy B points
+pin g down less well relative to the signal.</p>
+</li>
+<li><p><strong>V0's failure is a reference artefact.</strong> At large n_A, G-ref (g known exactly) beats the teacher (128 noisy B points), so it no longer sits between
+A-only and the teacher.</p>
+</li>
+<li><p><strong>Transfer remains large:</strong> at J = 2, NLL goes from −0.79 (A-only) to −1.95 (q-IS, K = 32) at n_A = 1, and from −1.88 to −2.33 at n_A = 5.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=r8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -9606,7 +10142,7 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">w</span> <span class="o">=</span> <span class="n">wide</span><span class="p">(</span><span class="n">nll6</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -9744,7 +10280,7 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">10.5</span><span class="p">,</span> <span class="mf">3.7</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -9790,7 +10326,7 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="p">{}</span>
@@ -9995,7 +10531,7 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -10050,7 +10586,7 @@ draw. The exact posterior puts 13 % on the true side, and the decoder's posterio
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [14]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">lbl</span><span class="si">}</span><span class="s2">"</span><span class="p">:</span> <span class="n">med</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"20k"</span><span class="p">,</span> <span class="n">pf</span><span class="p">),</span> <span class="p">(</span><span class="s2">"60k"</span><span class="p">,</span> <span class="n">pf6</span><span class="p">)]</span>

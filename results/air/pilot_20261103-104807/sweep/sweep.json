@@ -1,0 +1,24 @@
+{
+ "id": "pilot_20261103-104807",
+ "experiment": "air",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=air task.mode=eval task.g_norm=ecdf task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-090459/0/tracking/artifacts/model.pt 'task.proposal_ckpts=\"2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/0/tracking/artifacts/model.pt,4:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/1/tracking/artifacts/model.pt,8:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/2/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/3/tracking/artifacts/model.pt\"'",
+ "overrides": [
+  "experiment=air",
+  "task.mode=eval",
+  "task.g_norm=ecdf",
+  "task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-090459/0/tracking/artifacts/model.pt",
+  "task.proposal_ckpts=\"2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/0/tracking/artifacts/model.pt,4:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/1/tracking/artifacts/model.pt,8:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/2/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air/pilot_20261103-094425/3/tracking/artifacts/model.pt\""
+ ],
+ "backend": "detached",
+ "commit": "7b8bfd279e967f03059f59577b3c9f8d3ff8a631",
+ "branch": "HEAD",
+ "tag": "sweep/air/pilot_20261103-104807",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {},
+ "host": "ulysses",
+ "created": "2026-11-03T10:48:07",
+ "n_members": 1
+}
