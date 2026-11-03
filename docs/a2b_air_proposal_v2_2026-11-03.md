@@ -109,3 +109,49 @@ Compare four proposals at equal K; if the chain + Laplace mixture wins, the d �
 **Metrics:** ESS/K, calibration (SBC), coverage of the true mode, and NLL gap to the importance-sampling reference — the last as a function of n\_A and of the number of branches of g.
 
 **Expected:** (c) beats (a) clearly at n\_A ≥ 2 and on wiggly g; (a) stays competitive only at n\_A = 1, where the posterior is close to the prior.
+
+---
+
+## Refinement (Tim, 2026-11-03, after the first implementation)
+
+Summary of the clarification; it supersedes step 4's "MCMC moves" above.
+
+**1. Gauss–Newton builds the proposal; it does not move samples.** IS needs q's density at every draw, and a
+deterministic GN map that pulls draws onto a mode destroys it. So GN is used to *construct* q:
+- seeds: M coherent correspondence sets from the chain (v2), or M draws from the flow;
+- a few GN steps per seed to the mode,
+  δθ = (Λ + F)⁻¹ (Σ_a σ_a⁻² r_a e_a − Λθ), with e_a = y_a − μ_B(T_θ(x_a)) and r_a = μ_B′(u_a) ∂_θ T_θ(x_a);
+  steps fixed or learned (a learned step size / damping per point);
+- a Laplace Gaussian per mode: q(θ) = (1/M) Σ_m N(θ; θ̂_m, (Λ + F_m)⁻¹). Its density is exact, and the K IS draws
+  come from it, so the weights stay valid. Seeds converging to the same mode only give it more weight.
+- With the flow as the seed source, GN + Laplace sharpen it (fixes the flow's tendency to propose too wide) without
+  needing the flow's density for the final draws.
+
+**2. Forward–backward along sorted A (1-D); learned message passing (d ≥ 2).**
+- Hidden state of A point a: its location u_a in B (G grid cells); emission C_a(u_a); transition K(u_{a+1} | u_a):
+  monotone (u_{a+1} ≥ u_a), u_{a+1} − u_a ≈ s (x_{a+1} − x_a) with a local stretch s from the transform prior;
+  T(0) = 0, T(1) = 1 as fixed end states.
+- α_a(u) = C_a(u) Σ_{u′} α_{a−1}(u′) K(u | u′); β_a(u) = Σ_{u′} K(u′ | u) C_{a+1}(u′) β_{a+1}(u′);
+  p(u_a | A, B) ∝ α_a β_a: exact marginals with all modes; backward sampling gives coherent joint sets (the seeds of 1).
+  Cost n_A G². Only approximation: the Markov assumption; GN afterwards restores the full coupling through θ.
+- d ≥ 2: a kNN graph over A; each point holds a belief over its B location (coarse grid on the important axes, or
+  particles); messages "if I am at u, my neighbour should be near u + J_T (x_{a′} − x_a)"; a few rounds. Loopy, so a
+  GNN trained on simulations learns kernel, damping and belief representation (approximate BP; within-slot attention
+  is a crude version of it).
+
+**3. The evidence volume C_a(u).** Discretise B's domain (e.g. G = 256 on [0, 1]); C_a(u) = Q_B(y_a | u), B's
+predictive density at u evaluated at y_a, widened by σ_A. One curve of G numbers per A point, peaking wherever g ≈ y_a
+(a single hill and y_a = 0.7: two peaks, the two branches). Computed once per task against a cached B (n_A × G
+evaluations). Caveats: it ignores x_a (the prior's p(T(x_a) = u) enters through the chain's start and transitions);
+it needs h: with unknown h use ranks (y_a's rank in A vs g(u)'s rank in B), a small set of candidate h, or a learned
+emission.
+
+**How the implementation maps onto this** (`experimental/air/chain.py`, notebook 14):
+- 1: `laplace_mixture` / `fit_evidence` (Levenberg–Marquardt = damped GN, finite-difference Jacobian, Λ = I in
+  whitened θ); variants `chain_gp` (chain seeds) and `flow_gn` (flow seeds). A defensive ε = 0.1 prior share is kept
+  in q, as in pilot 3's flow.
+- 2: forward filtering + backward sampling. The transition is not the stretch kernel but the exact pairwise prior
+  marginal of (T(x_a), T(x_{a+1})) at the actual x's, estimated from 4096 prior draws (so monotonicity, the end
+  conditions and the stretch distribution come from the prior itself); the start is p(T(x_(1)) = u).
+- 3: G = 256; GP predictive (B noisy); "widened by σ_A" as a mixture over σ_A's prior range (σ_A is latent: neither
+  the flow nor the decoder is given it); h = id here, so the rank/candidate-h emission is not needed yet.
