@@ -160,3 +160,4 @@ with deliverables and open questions.
 - Post hoc causes, with evidence, in notebook 10 and the log entry: underfit proposal, K = 32 too small, decoder floor 0.07–0.09 + evidence 0.01–0.08. Open: the 0.28 remainder at n_A = 1.
 - Correction: my mid-run statements that finite K was the main cause and that KL worsens on a fine grid were wrong; finite K is partial, and KL(‖q) is unchanged on the fine grid.
 - Added `task.mode=diagnose` (experimental/air/diagnose.py). Deliverables: notebook 10 (outputs stripped on commit), `reports/figures/air/10_air_report.html`.
+- 2026-11-03: notebook 10 gained example tasks (B, f_A, PPD heatmaps for AIR and A-only), a registration view (q draws weighted by evidence vs the G-ref posterior) and training curves; AIR runs synced to the local MLflow store.
