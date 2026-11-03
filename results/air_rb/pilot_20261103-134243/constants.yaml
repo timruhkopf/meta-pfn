@@ -1,0 +1,29 @@
+name: air_rb
+task.J: 16
+task.aonly_ckpt: ''
+task.batch: 128
+task.clip_d: 1.0
+task.clip_q: 20.0
+task.decoder_ckpt: ''
+task.device: cuda
+task.diag_ks: '[32, 128, 512, 2048]'
+task.dm: 128
+task.eval_seed: 777
+task.every: 250
+task.fid_tasks: 32
+task.g_norm: ecdf
+task.h_kind: id
+task.j_mix: '[2, 4, 8, 16]'
+task.k_exact: 10000
+task.k_ref: 4096
+task.ks: '[8, 32, 128]'
+task.layers: 6
+task.lr: 0.0003
+task.max_steps: 100000
+task.mode: proposal_rb
+task.n_eval: 256
+task.name: air
+task.proposal_ckpts: ''
+task.sig_list: '[0.0, 0.1, 0.3, 1.0]'
+task.steps: 20000
+task.threads: 4

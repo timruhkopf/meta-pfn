@@ -1,0 +1,14 @@
+# @package _global_
+# AIR pilot 3 (issue #19, notebook 11): Rao-Blackwellised transform latent θ_c = θ̃ + √Σ ε vs a clean A-only PFN.
+# Spec: docs/a2b_air_pilot1_review_2026-11-03.md, amended in notebook 11 (Σ = ∞ dropped; baseline = clean A-only PFN).
+# Training: task.mode=decoder_rb | aonly (seed=0,1,2), task.mode=proposal_rb task.J=2,16 (seed=0,1,2); then
+# task.mode=eval_rb with task.decoder_ckpt, task.aonly_ckpt, task.proposal_ckpts.
+defaults:
+  - override /task: air
+
+name: air_rb
+task:
+  g_norm: ecdf
+  n_eval: 256
+  k_ref: 4096
+  every: 250

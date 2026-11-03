@@ -1,0 +1,32 @@
+{
+ "id": "pilot_20261103-184131",
+ "experiment": "air_rb",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep local pilot experiment=air_rb task.mode=eval_rb seed=0 task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-101808/0/tracking/artifacts/model.pt task.aonly_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-114539/0/tracking/artifacts/model.pt task.proposal_ckpts=2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-120248/0/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-134243/0/tracking/artifacts/model.pt",
+ "overrides": [
+  "experiment=air_rb",
+  "task.mode=eval_rb",
+  "seed=0",
+  "task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-101808/0/tracking/artifacts/model.pt",
+  "task.aonly_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-114539/0/tracking/artifacts/model.pt",
+  "task.proposal_ckpts=2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-120248/0/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-134243/0/tracking/artifacts/model.pt"
+ ],
+ "backend": "local",
+ "commit": "f41c8c59d0ac34762c5c54ef31d96582cc8cf7f6",
+ "branch": "HEAD",
+ "tag": "sweep/air_rb/pilot_20261103-184131",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-11-03T18:41:31",
+ "editable_dependencies": {},
+ "status_counts": {
+  "DONE": 2
+ },
+ "first_start": "2026-11-03T18:41:33",
+ "last_end": "2026-11-03T21:18:49",
+ "wall_h": 2.62,
+ "device_h": 0.0,
+ "snapshot_created": "2026-11-03T21:34:29",
+ "sweep_dir": "runs/air_rb/pilot_20261103-184131"
+}

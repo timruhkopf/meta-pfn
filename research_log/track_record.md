@@ -166,3 +166,13 @@ with deliverables and open questions.
 - 2026-11-03 09:55: BUG (mine): tasks/air.py did not pass task.g_norm to train_proposal, so pilot-2 proposal sweep pilot_20261103-090502 trained under min-max (J = 2, 4 bit-identical to pilot 1). Killed (queue 1518248, member 1519169); sweep invalid, never to be snapshotted or decided. Decoder sweep pilot_20261103-090459 is valid (A-only val NLL -1.835 vs -1.455 in pilot 1). Fixed, regression test added, proposals relaunched.
 - 2026-11-03 10:20: pilot 3 (experiment air_rb, notebook 11) pre-registered at 7b8bfd2 after the user review: Σ ∈ {0, 0.1, 0.3, 1} (Σ = ∞ dropped), clean A-only PFN baseline (user decisions), Σ-conditioned decoder and proposals, plateau training, proposal clip 20, QMC, 3 seeds, ECDF prior. Launched decoder_rb pilot_20261103-101808 (seeds 0-2). Hourly cron drives the rest.
 - 2026-11-03 12:20: pilot 2 done (eval pilot_20261103-104807): fails as registered (V0 artefact, V1.2, V1.3, V2, V3 coverage/KL, V4 2 of 3); V5 passes; edge leak removed. Notebook 10 §Pilot 2, log §2. Also fixed a bug in my notebook-10 criteria function (V1.2/V1.3 read the pilot-1 table; harmless for the 60k rows, which share that decoder).
+
+### 2026-11-04 00:10 — AIR pilot 3 finished (issue #19, session 8ce7cc8e)
+- All pilot-3 sweeps DONE (decoder 101808, A-only 114539, proposals 120248/134243, evals 184131, 211850, 160447);
+  snapshots in results/air_rb/. Notebook 11 built and executed; HTML in reports/figures/air_rb/.
+- Verified: P3.4 passes (gain +0.28 to +1.12 nats over the clean A-only PFN at K = 32, best Σ = 0.1), P3.2, P3.3, P3.5
+  pass, P3.1 fails on KL only. Proposed GO (rule 1); not decided.
+- Deviations recorded in notebook 11 and log §1: J = 16 initial-plateau guard (f41c8c5), 2-member eval sweeps, an eval
+  runner loop-variable bug of mine (seed 2 would have run 3×; fixed, no data lost).
+- Found: eval_tasks draws from a device-specific generator, so tasks regenerated on CPU differ from pilot 3's CUDA tasks
+  (affects MTPFN's first diagnostics and #21's σ_A analysis; both fixed/queued in their branches).
