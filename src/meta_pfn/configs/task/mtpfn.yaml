@@ -1,7 +1,7 @@
 # MTPFN baseline (tasks/mtpfn.py; issue #20, notebook 12). Paper: Li, Daulton, Müller, Wilson, Bakshy,
 # "Robust Transfer for Bayesian Optimization with Prior-Data Fitted Networks" (SPIGM @ NeurIPS 2025).
 name: mtpfn
-mode: icm_train         # icm_train | icm_ref | icm_eval | air_train | air_eval
+mode: icm_train         # icm_train | icm_ref | icm_eval | air_train | air_eval | air_diag
 prior: icm              # icm (arm R) | air (arm A)
 # model (paper: 12 intra + 11 inter blocks, width 512, 4 heads)
 dm: 256
@@ -40,6 +40,8 @@ j_mix: [2, 4, 8, 16]
 g_norm: ecdf
 eval_j: [2, 16]
 eval_seed: 777
+aonly_ckpt: ""          # air_diag: pilot 3's clean A-only PFN (runs/air_rb/pilot_20261103-114539/<seed>)
+n_sens: 32              # air_diag: tasks per (J, n_A) for the sensitivity maps
 ckpts: ""               # icm_eval / air_eval: "name:path,..." (a name containing "gauss" loads the Gaussian head)
 device: cuda
 threads: 4

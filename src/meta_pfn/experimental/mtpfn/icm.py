@@ -9,8 +9,10 @@ is done in one joint draw: its block of the covariance is replaced by its own RB
 are zero, which is the same distribution as Alg. A.1 lines 11-15.
 
 References for one evaluation dataset (exact Gaussian algebra, float64):
-- bayes: the Bayes predictive under the prior (p), by importance sampling over (K_T, ℓ, σ, ℓ_j) from the prior with
-  the 2^(T-1) unrelated-masks enumerated exactly; weights ∝ p(mask) N(y; 0, C);
+- bayes: the Bayes predictive under the prior (p), by adaptive importance sampling (population Monte Carlo) over
+  (K_T, ℓ, σ, ℓ_j) in unconstrained coordinates (K draws from the prior, then 2K and 4K from a Gaussian fitted to the
+  weighted draws with inflated covariance, mixed 10 % with the prior), the 2^(T-1) unrelated-masks enumerated exactly;
+  weights ∝ p(z) p(mask) N(y; 0, C) / q(z); the last stage is the estimate (plain prior IS gave ESS 4-16 of 8192);
 - bayes_p0: the same restricted to mask = 0 (the Bayes predictive under p = 0);
 - ml_icm: the single draw with the highest marginal likelihood (a best-of-K stand-in for the paper's MAP ICM);
 - oracle_icm: true (K_T, ℓ, σ, mask, ℓ_j);
@@ -23,7 +25,8 @@ import math
 from dataclasses import dataclass
 
 import torch
-from torch.distributions import LKJCholesky
+from torch.distributions import Gamma, LKJCholesky
+from torch.distributions.transforms import CorrCholeskyTransform
 
 
 @dataclass
@@ -194,31 +197,66 @@ def references(b: ICMBatch, i: int, p: float, K: int, g: torch.Generator, chunk:
     lml, mu, var = run(b.kt[i : i + 1].double(), b.ell[i : i + 1].double(), b.ell_src[i : i + 1].double(),
                        b.sig[i : i + 1].double(), b.unrel[i : i + 1])  # fmt: skip
     out["oracle_icm"] = _lognorm(yq, mu[0], var[0])
-    # prior IS over hyperparameters, masks enumerated
-    lw_all, lp_all, lw_p0, lp_p0 = [], [], [], []
-    best = (-float("inf"), None)
-    for c in range(0, K, chunk):
-        k = min(chunk, K - c)
-        kt = _lkj(k, T, g, dev).double()
-        ell = _gamma((k, 1), g, dev).clamp_min(0.02).expand(k, d).double()
-        ell_src = _gamma((k, T, 1), g, dev).clamp_min(0.02).expand(k, T, d).double()
-        sig = (SIG_LO + (SIG_HI - SIG_LO) * torch.rand(k, generator=g, device=dev)).double()
+    # adaptive IS (population Monte Carlo) over hyperparameters in an unconstrained space; masks enumerated
+    nc = T * (T - 1) // 2
+    zdim = nc + 2 + (T - 1)
+
+    def lik_all(z):
+        """z [k, zdim] -> (log p(z) [k], per-mask log lik [k, 2^(T-1)], log predictive [k, 2^(T-1), Q])."""
+        kt, ell, ell_src, sig, lpz = _from_z(z, T, d)
+        lls, lps = [], []
         for mi in range(len(masks)):
-            lml, mu, var = run(kt, ell, ell_src, sig, masks[mi].expand(k, -1))
-            lp = _lognorm(yq, mu, var)
-            lw_all.append(lml + log_pm[mi])
-            lp_all.append(lp)
-            if mi == 0:
-                lw_p0.append(lml)
-                lp_p0.append(lp)
-            j = int(lml.argmax())
-            if float(lml[j]) > best[0]:
-                best = (float(lml[j]), lp[j])
-    lw, lp = torch.cat(lw_all), torch.cat(lp_all)
-    out["bayes"] = _mix(lw, lp)
-    out["bayes_p0"] = _mix(torch.cat(lw_p0), torch.cat(lp_p0))
-    out["ml_icm"] = best[1]
-    ess = {"ess_bayes": _ess(lw), "ess_bayes_p0": _ess(torch.cat(lw_p0))}
+            lml, mu, var = run(kt, ell, ell_src, sig, masks[mi].expand(z.shape[0], -1))
+            lls.append(lml)
+            lps.append(_lognorm(yq, mu, var))
+        return lpz, torch.stack(lls, 1), torch.stack(lps, 1)
+
+    def stage(z, logq):
+        lpz, ll, lp = [], [], []
+        for c in range(0, z.shape[0], chunk):
+            a, b_, e = lik_all(z[c : c + chunk])
+            lpz.append(a)
+            ll.append(b_)
+            lp.append(e)
+        lpz, ll, lp = torch.cat(lpz), torch.cat(ll), torch.cat(lp)
+        lw = lpz[:, None] + ll + log_pm[None] - logq[:, None]  # [k, masks]
+        return lw, ll, lp
+
+    def fit(z, lw, scale):
+        w = (lw - torch.logsumexp(lw.flatten(), 0)).exp().sum(1)  # mask-marginal weights [k]
+        m = (w[:, None] * z).sum(0)
+        dz = z - m
+        S = (w[:, None, None] * dz[:, :, None] * dz[:, None, :]).sum(0)
+        return m, scale * S + 0.01 * torch.eye(zdim, device=dev, dtype=torch.float64)
+
+    def draw_mix(k, m, S, eps=0.1):
+        n0 = max(1, round(eps * k))
+        z0 = _prior_z(n0, T, g, dev)
+        L = torch.linalg.cholesky(S)
+        z1 = m + (L @ torch.randn(k - n0, zdim, 1, generator=g, device=dev, dtype=torch.float64))[..., 0]
+        z = torch.cat([z0, z1])
+        lg = torch.distributions.MultivariateNormal(m, scale_tril=L).log_prob(z)
+        lpz = _from_z(z, T, d)[4]
+        return z, torch.logsumexp(torch.stack([math.log(eps) + lpz, math.log(1 - eps) + lg]), 0)
+
+    z = _prior_z(K, T, g, dev)
+    lw, ll, lp = stage(z, _from_z(z, T, d)[4])  # prior draws: logq = log p(z)
+    best = [ll.max()]
+    best_lp = [lp.flatten(0, 1)[int(ll.flatten().argmax())]]
+    ess_stage = [_ess(lw.flatten())]
+    for scale, k in ((4.0, 2 * K), (2.0, 4 * K)):
+        m, S = fit(z, lw, scale)
+        z, logq = draw_mix(k, m, S)
+        lw, ll, lp = stage(z, logq)
+        best.append(ll.max())
+        best_lp.append(lp.flatten(0, 1)[int(ll.flatten().argmax())])
+        ess_stage.append(_ess(lw.flatten()))
+    out["bayes"] = _mix(lw.flatten(), lp.flatten(0, 1))
+    lw0 = lw[:, 0] - log_pm[0]
+    out["bayes_p0"] = _mix(lw0, lp[:, 0])
+    out["ml_icm"] = best_lp[int(torch.stack(best).argmax())]
+    ess = {"ess_bayes": ess_stage[-1], "ess_bayes_p0": _ess(lw0), "ess_bayes_stage0": ess_stage[0],
+           "n_bayes": float(lw.numel())}  # fmt: skip
     # target only
     xt, yt = x[tid == 0], y[tid == 0]
     xat = torch.cat([xt, xq])
@@ -241,3 +279,32 @@ def references(b: ICMBatch, i: int, p: float, K: int, g: torch.Generator, chunk:
 
 
 SIG_LO, SIG_HI = 0.01, 0.1  # the prior's noise range; references() assumes the defaults of sample_icm
+_CC = CorrCholeskyTransform()
+_GAM = Gamma(torch.tensor(3.0, dtype=torch.float64), torch.tensor(6.0, dtype=torch.float64))
+
+
+def _from_z(z, T, d):
+    """Unconstrained z [k, T(T-1)/2 + 2 + (T-1)] -> (K_T, ℓ [k, d], ℓ_src [k, T, d], σ, log prior density of z).
+    z = (CorrCholesky coordinates of K_T, log ℓ, logit((σ - lo)/(hi - lo)), log ℓ_1..ℓ_{T-1})."""
+    nc = T * (T - 1) // 2
+    zc, zl, zs, zj = z[:, :nc], z[:, nc], z[:, nc + 1], z[:, nc + 2 :]
+    L = _CC(zc)
+    lp = LKJCholesky(T, concentration=1.0).log_prob(L) + _CC.log_abs_det_jacobian(zc, L)
+    ell, ellj = zl.exp(), zj.exp()
+    lp = lp + _GAM.log_prob(ell) + zl + (_GAM.log_prob(ellj) + zj).sum(-1)
+    u = torch.sigmoid(zs)
+    lp = lp + torch.nn.functional.logsigmoid(zs) + torch.nn.functional.logsigmoid(-zs)
+    sig = SIG_LO + (SIG_HI - SIG_LO) * u
+    kt = L @ L.transpose(-1, -2)
+    ell_src = torch.cat([torch.ones_like(ellj[:, :1]), ellj], 1)[..., None].expand(-1, T, d)
+    return kt, ell[:, None].expand(-1, d), ell_src, sig, lp
+
+
+def _prior_z(k, T, g, dev):
+    """Prior draws in z coordinates."""
+    L = torch.linalg.cholesky(_lkj(k, T, g, dev).double())
+    zc = _CC.inv(L)
+    zl = _gamma((k,), g, dev).double().clamp_min(0.02).log()
+    u = torch.rand(k, generator=g, device=dev, dtype=torch.float64).clamp(1e-6, 1 - 1e-6)
+    zj = _gamma((k, T - 1), g, dev).double().clamp_min(0.02).log()
+    return torch.cat([zc, zl[:, None], torch.logit(u)[:, None], zj], 1)

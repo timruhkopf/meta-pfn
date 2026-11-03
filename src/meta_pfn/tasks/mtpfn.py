@@ -3,7 +3,8 @@
 - `icm_ref`: exact GP references on the fixed ICM evaluation datasets; tables `nll`, `ess`;
 - `icm_eval`: evaluate MTPFN checkpoints (task.ckpts = "name:path,...") on the same datasets; table `nll`;
 - `air_train`: train an MTPFN on the AIR prior (B = source, A = target); artifact model.pt; table `train`;
-- `air_eval`: evaluate it on pilot 3's evaluation tasks (task.ckpts = "mtpfn:path"); table `nll`.
+- `air_eval`: evaluate it on pilot 3's evaluation tasks (task.ckpts = "mtpfn:path"); table `nll`;
+- `air_diag`: diagnostics on the same tasks (experimental/mtpfn/diagnose.py; notebook 13).
 """
 
 import time
@@ -73,6 +74,19 @@ def mtpfn(cfg: DictConfig, run: Run) -> float:
         nll = Tr.icm_evaluate(models, t, dev, log=log)
         run.log_table("nll", nll)
         score = float(nll[nll.method == next(iter(models))].nll.mean())
+    elif t.mode == "air_diag":
+        from ..experimental.mtpfn.diagnose import air_diagnose
+
+        (m,) = _load(t, dev).values()
+        ao = None
+        if t.aonly_ckpt:
+            ao = AD.Decoder(D=128, layers=6).to(dev)
+            ao.load_state_dict(torch.load(t.aonly_ckpt, map_location=dev))
+        tabs = air_diagnose(m, t, dev, aonly=ao, log=log)
+        for k, v in tabs.items():
+            run.log_table(k, v)
+        c = tabs["ctrl"]
+        score = float(c[(c.input == "b") & (c.n_a == 5)].nll.mean())
     elif t.mode == "air_eval":
         (m,) = _load(t, dev).values()
         nll = Tr.air_evaluate(m, t, dev, log=log)
