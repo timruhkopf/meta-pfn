@@ -315,7 +315,8 @@ def evaluate_chain(dec, props: dict, device, *, n_tasks: int, seed: int, g_norm:
         P = base.xa.shape[0]
         info += [{"J": J, "task": i, "branches": int(b)} for i, b in enumerate(n_branches(base))]
         gp = GPB(base.xb, base.yb)
-        info += [{"J": J, "task": i, "gp_ell": float(gp.ell[i]), "gp_sn": float(gp.sn[i])} for i in range(P)]
+        info += [{"J": J, "task": i, "gp_ell": float(gp.ell[i]), "gp_sn": float(gp.sn[i]),
+                  "sig_a": float(base.sig_a[i])} for i in range(P)]  # fmt: skip
         for n in N_A_RB:
             t = base.head(n)
             if J == 2:
