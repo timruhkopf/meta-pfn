@@ -1,0 +1,42 @@
+name: mtpfn
+seed: 2
+task.aonly_ckpt: /home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-114539/2/tracking/artifacts/model.pt
+task.ard: false
+task.batch: 64
+task.ckpts: mtpfn:/home/ruhkopf/PycharmProjects/meta-pfn-mtpfn/runs/mtpfn/pilot_20261103-132611/2/tracking/artifacts/model.pt
+task.clip: 1.0
+task.d_ff: 512
+task.d_max: 3
+task.device: cuda
+task.dm: 128
+task.eval_d: '[1, 3]'
+task.eval_j: '[2, 16]'
+task.eval_n_target: '[1, 2, 5, 10]'
+task.eval_seed: 777
+task.every: 500
+task.g_norm: ecdf
+task.head: bar
+task.heads: 4
+task.j_mix: '[2, 4, 8, 16]'
+task.k_ref: 1024
+task.lr: 0.0001
+task.mode: air_diag
+task.n_bins: 400
+task.n_eval: 256
+task.n_pairs: 4
+task.n_range: '[10, 100]'
+task.n_sens: 32
+task.n_src: 20
+task.name: mtpfn
+task.p: 0.2
+task.p_ref: 0.2
+task.prior: air
+task.q: 32
+task.q_eval: 50
+task.steps: 100000
+task.t_eval: 4
+task.t_range: '[2, 5]'
+task.threads: 4
+task.warmup: 1000
+task.y_hi: 5.0
+task.y_lo: -5.0

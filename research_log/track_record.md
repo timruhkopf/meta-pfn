@@ -166,3 +166,12 @@ with deliverables and open questions.
 - 2026-11-03 09:55: BUG (mine): tasks/air.py did not pass task.g_norm to train_proposal, so pilot-2 proposal sweep pilot_20261103-090502 trained under min-max (J = 2, 4 bit-identical to pilot 1). Killed (queue 1518248, member 1519169); sweep invalid, never to be snapshotted or decided. Decoder sweep pilot_20261103-090459 is valid (A-only val NLL -1.835 vs -1.455 in pilot 1). Fixed, regression test added, proposals relaunched.
 - 2026-11-03 10:20: pilot 3 (experiment air_rb, notebook 11) pre-registered at 7b8bfd2 after the user review: Σ ∈ {0, 0.1, 0.3, 1} (Σ = ∞ dropped), clean A-only PFN baseline (user decisions), Σ-conditioned decoder and proposals, plateau training, proposal clip 20, QMC, 3 seeds, ECDF prior. Launched decoder_rb pilot_20261103-101808 (seeds 0-2). Hourly cron drives the rest.
 - 2026-11-03 12:20: pilot 2 done (eval pilot_20261103-104807): fails as registered (V0 artefact, V1.2, V1.3, V2, V3 coverage/KL, V4 2 of 3); V5 passes; edge leak removed. Notebook 10 §Pilot 2, log §2. Also fixed a bug in my notebook-10 criteria function (V1.2/V1.3 read the pilot-1 table; harmless for the 60k rows, which share that decoder).
+
+### 2026-11-04 00:30 — MTPFN on the AIR prior finished (issue #20, session 8ce7cc8e)
+- Training `pilot_20261103-132611` 3/3 DONE; diagnostics on pilot 3's exact tasks `pilot_20261103-235449/-235620/-235751`
+  (verified: A-only and G-ref rows equal pilot 3's). Notebook 13 + HTML (reports/figures/mtpfn_air/), log §1.
+- Result: transfer +1.05 … +0.21 over the clean A-only PFN, gap to G-ref 0.20–0.28, no registration, warp not the
+  bottleneck; paired vs AIR: AIR better by 0.07–0.09 (J = 2), 0.03 (J = 16).
+- Correction: my statement (2026-11-03) that a different n_eval draws different tasks was wrong on CUDA (the 128-task
+  runs were the first half of the same tasks); only the CPU-generated runs used different tasks.
+- Arm R: trainings 132558 / 132605 running (low priority); its reference not launched.
