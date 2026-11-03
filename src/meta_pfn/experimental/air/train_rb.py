@@ -33,8 +33,9 @@ class Plateau:
     """Learning rate and stop decision for the plateau rule (module docstring)."""
 
     def __init__(self, lr: float, max_steps: int, warm: int = 500, window: int = 5000, tol: float = 0.01,
-                 anneal: int = 5000, min_steps: int = 10000):  # fmt: skip
+                 anneal: int = 5000, min_steps: int = 10000, escape: float = 0.1):  # fmt: skip
         self.lr, self.max_steps, self.warm, self.window, self.tol = lr, max_steps, warm, window, tol
+        self.escape = escape
         self.anneal, self.min_steps = anneal, min_steps
         self.hist: list[tuple[int, float]] = []
         self.start: int | None = None  # step at which the anneal began
@@ -44,10 +45,14 @@ class Plateau:
             return self.lr * min(1.0, (step + 1) / self.warm)
         return self.lr * 0.5 * (1 + math.cos(math.pi * min(1.0, (step - self.start) / self.anneal)))
 
-    def observe(self, step: int, val: float) -> None:
+    def observe(self, step: int, val: float, ref: float | None = None) -> None:
+        """ref (optional): a reference level (the proposal: the prior's NLL). Initial-plateau guard (amendment
+        2026-11-03): no anneal before the best value is ≥ `escape` below ref, so a run sitting at its starting
+        level (J = 16 proposals: ~8k steps at the prior in pilot 2) is not stopped as converged."""
         self.hist.append((step, val))
-        if self.start is None and step >= self.min_steps:
-            best_now = min(v for _, v in self.hist)
+        best_now = min(v for _, v in self.hist)
+        escaped = ref is None or best_now <= ref - self.escape
+        if self.start is None and step >= self.min_steps and escaped:
             old = [v for s, v in self.hist if s <= step - self.window]
             if old and min(old) - best_now < self.tol:
                 self.start = step
@@ -147,8 +152,8 @@ def train_proposal_rb(q: Proposal, J: int, max_steps: int, device, *, seed: int,
             q.eval()
             with torch.no_grad():
                 vnll = float(q.nll(val.xb, val.yb, val.xa, val.ya, val.theta, 0.0))
-            pl.observe(step, vnll)
             vp = float(-log_prior(val.theta).mean())
+            pl.observe(step, vnll, ref=vp)
             row = {"step": step, "nll": float(loss.detach()), "grad_norm": float(gn), "n_a": n, "lr": pl.rate(step),
                    "s": time.time() - t0, "val_nll_n5": vnll, "val_prior_nll": vp}  # fmt: skip
             hist.append(row)

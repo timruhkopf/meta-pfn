@@ -120,6 +120,11 @@ def test_pilot3_sigma_prior_qmc_and_plateau() -> None:
     for s in range(0, 40_001, 250):
         pl.observe(s, 2.0 if s <= 3000 else 1.0)
     assert pl.start == 10_000 and pl.done(15_000) and not pl.done(14_750)
+    # initial-plateau guard: sitting at the reference (the prior) is not convergence; anneal only after escaping
+    pl = Plateau(1e-3, max_steps=100_000)
+    for s in range(0, 40_001, 250):
+        pl.observe(s, 22.78 if s < 20_000 else 21.0, ref=22.78)
+    assert pl.start == 25_000
 
 
 def test_sigma_conditioned_decoder_masks_still_hold() -> None:
