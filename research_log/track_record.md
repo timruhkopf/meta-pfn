@@ -161,3 +161,4 @@ with deliverables and open questions.
 - Correction: my mid-run statements that finite K was the main cause and that KL worsens on a fine grid were wrong; finite K is partial, and KL(‖q) is unchanged on the fine grid.
 - Added `task.mode=diagnose` (experimental/air/diagnose.py). Deliverables: notebook 10 (outputs stripped on commit), `reports/figures/air/10_air_report.html`.
 - 2026-11-03: notebook 10 gained example tasks (B, f_A, PPD heatmaps for AIR and A-only), a registration view (q draws weighted by evidence vs the G-ref posterior) and training curves; AIR runs synced to the local MLflow store.
+- 2026-11-03: review questions answered in notebook 10: A-only = same weights, B masked; edge mass comes from the min-max-normalised prior (P(max at an endpoint) 0.525, edge quintiles 80 %); J = 2 posteriors keep >= 2 modes in 18-32 % of tasks; task 0 n_A = 3 mode weighting matches the exact posterior (13 % vs 13 % on the true side).

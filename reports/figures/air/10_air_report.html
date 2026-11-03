@@ -9219,6 +9219,366 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 </div>
 </div>
 </div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=q0">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="Review-questions-(2026-11-03)">Review questions (2026-11-03)<a class="anchor-link" href="#Review-questions-(2026-11-03)">¶</a></h3><p>Four questions from reading the example plots, checked with code:</p>
+<ol>
+<li>Is A-only the same network? Yes: <code>use_b=False</code> masks B out of the same weights (<code>decoder.py</code>). It was trained jointly as a second forward pass.</li>
+<li>Why do the predictives put mass on 0 and 1 at the edges? Is the prior biased there? The cell below measures it.</li>
+<li>How many A points pin T down? For these plots T has J = 2 parameters. The cell counts posterior modes as n_A grows.</li>
+<li>In example task 0, n_A = 3, why is the wrong mode weighted higher? The cell splits the posterior along its ridge.</li>
+</ol>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=q1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">meta_pfn.experimental.air.estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">decode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">meta_pfn.experimental.air.prior</span><span class="w"> </span><span class="kn">import</span> <span class="n">draw_funcs</span><span class="p">,</span> <span class="n">log_prior</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="n">draw_funcs</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="s2">"cpu"</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">256</span><span class="p">)[</span><span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">am</span><span class="p">,</span> <span class="n">ai</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">v</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">at_end</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">253</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"(2) prior over g: P(max at an endpoint) = </span><span class="si">{</span><span class="n">at_end</span><span class="p">(</span><span class="n">am</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, P(min at an endpoint) = </span><span class="si">{</span><span class="n">at_end</span><span class="p">(</span><span class="n">ai</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, "</span>
+      <span class="sa">f</span><span class="s2">"P(either) = </span><span class="si">{</span><span class="p">(</span><span class="n">at_end</span><span class="p">(</span><span class="n">am</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">at_end</span><span class="p">(</span><span class="n">ai</span><span class="p">))</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  (uniform location: about 0.023 each)"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">lab</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">bins</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">20000</span> <span class="k">for</span> <span class="n">lab</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span>
+                      <span class="p">[(</span><span class="s2">"x = 0"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="s2">"x = 0.25"</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="p">(</span><span class="s2">"x = 0.5"</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="p">(</span><span class="s2">"x = 1"</span><span class="p">,</span> <span class="mi">255</span><span class="p">)]},</span>
+                     <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"y in [0, .2)"</span><span class="p">,</span> <span class="s2">"[.2, .4)"</span><span class="p">,</span> <span class="s2">"[.4, .6)"</span><span class="p">,</span> <span class="s2">"[.6, .8)"</span><span class="p">,</span> <span class="s2">"[.8, 1]"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>  <span class="c1"># fmt: skip</span>
+
+<span class="n">g_pts</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="mi">101</span><span class="p">)</span>
+<span class="n">rows_m</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">nm</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">128</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">grid_ref</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">g_pts</span><span class="p">)[</span><span class="s2">"logpost"</span><span class="p">]</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">101</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">ravel</span><span class="p">())[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">lab</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">p</span> <span class="o">&gt;=</span> <span class="n">s</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(),</span> <span class="mf">0.9</span><span class="p">)])</span>
+        <span class="n">nm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="n">ndimage</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">lab</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+    <span class="n">nm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nm</span><span class="p">)</span>
+    <span class="n">rows_m</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"n_A"</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s2">"share of tasks with &gt;= 2 modes"</span><span class="p">:</span> <span class="n">nm</span><span class="o">.</span><span class="fm">__ge__</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="s2">"mean modes"</span><span class="p">:</span> <span class="n">nm</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                   <span class="s2">"posterior width (prior = 1)"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">med</span><span class="p">(</span><span class="n">pf</span><span class="p">,</span> <span class="s2">"w_exact"</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">))})</span>  <span class="c1"># fmt: skip</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"(3) exact posterior (G-ref, J = 2), 128 tasks; a mode = a 90 %-HPD component with &gt;= 5 % mass:"</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows_m</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">gr</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">grid_ref</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">g_pts</span><span class="p">)</span>
+<span class="n">side</span> <span class="o">=</span> <span class="n">g_pts</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.8</span>  <span class="c1"># the end of the ridge that holds the true θ</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">ev</span> <span class="o">=</span> <span class="n">decode</span><span class="p">(</span><span class="n">dec</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">g_pts</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">n_perm</span><span class="o">=</span><span class="mi">8</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">norm</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">l</span><span class="p">:</span> <span class="n">l</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">logsumexp</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+<span class="n">mass</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"exact posterior"</span><span class="p">:</span> <span class="n">norm</span><span class="p">(</span><span class="n">gr</span><span class="p">[</span><span class="s2">"logpost"</span><span class="p">]),</span> <span class="s2">"decoder posterior"</span><span class="p">:</span> <span class="n">norm</span><span class="p">(</span><span class="n">log_prior</span><span class="p">(</span><span class="n">g_pts</span><span class="p">)</span> <span class="o">+</span> <span class="n">ev</span><span class="p">),</span>
+        <span class="s2">"exact likelihood alone"</span><span class="p">:</span> <span class="n">norm</span><span class="p">(</span><span class="n">gr</span><span class="p">[</span><span class="s2">"ll"</span><span class="p">]),</span> <span class="s2">"decoder likelihood alone"</span><span class="p">:</span> <span class="n">norm</span><span class="p">(</span><span class="n">ev</span><span class="p">)}</span>  <span class="c1"># fmt: skip</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"(4) task 0, n_A = 3; true θ̃ = </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">theta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> (prior log density </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">log_prior</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">theta</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="n">side</span><span class="p">]</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">mass</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">name</span><span class="o">=</span><span class="s2">"mass with θ̃₂ &gt; 0.8 (true side)"</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">())</span>
+<span class="n">peaks</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"true-side peak"</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">side</span><span class="p">,</span> <span class="n">gr</span><span class="p">[</span><span class="s2">"logpost"</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="o">-</span><span class="mf">1e9</span><span class="p">))</span><span class="o">.</span><span class="n">argmax</span><span class="p">(),</span>
+         <span class="s2">"other peak"</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">side</span><span class="p">,</span> <span class="n">gr</span><span class="p">[</span><span class="s2">"logpost"</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="o">-</span><span class="mf">1e9</span><span class="p">))</span><span class="o">.</span><span class="n">argmax</span><span class="p">()}</span>  <span class="c1"># fmt: skip</span>
+<span class="n">display</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="p">{</span><span class="s2">"θ̃"</span><span class="p">:</span> <span class="n">g_pts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="s2">"log prior"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">log_prior</span><span class="p">(</span><span class="n">g_pts</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]),</span>
+                          <span class="s2">"exact log lik"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">gr</span><span class="p">[</span><span class="s2">"ll"</span><span class="p">][</span><span class="n">i</span><span class="p">]),</span> <span class="s2">"decoder evidence"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">ev</span><span class="p">[</span><span class="n">i</span><span class="p">])}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">peaks</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>(2) prior over g: P(max at an endpoint) = 0.525, P(min at an endpoint) = 0.526, P(either) = 0.800  (uniform location: about 0.023 each)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>x = 0</th>
+<th>x = 0.25</th>
+<th>x = 0.5</th>
+<th>x = 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>y in [0, .2)</th>
+<td>0.401</td>
+<td>0.224</td>
+<td>0.212</td>
+<td>0.401</td>
+</tr>
+<tr>
+<th>[.2, .4)</th>
+<td>0.067</td>
+<td>0.186</td>
+<td>0.182</td>
+<td>0.070</td>
+</tr>
+<tr>
+<th>[.4, .6)</th>
+<td>0.062</td>
+<td>0.179</td>
+<td>0.201</td>
+<td>0.060</td>
+</tr>
+<tr>
+<th>[.6, .8)</th>
+<td>0.070</td>
+<td>0.184</td>
+<td>0.190</td>
+<td>0.072</td>
+</tr>
+<tr>
+<th>[.8, 1]</th>
+<td>0.400</td>
+<td>0.226</td>
+<td>0.214</td>
+<td>0.397</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>(3) exact posterior (G-ref, J = 2), 128 tasks; a mode = a 90 %-HPD component with &gt;= 5 % mass:
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>n_A</th>
+<th>share of tasks with &gt;= 2 modes</th>
+<th>mean modes</th>
+<th>posterior width (prior = 1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>1</td>
+<td>0.289</td>
+<td>1.641</td>
+<td>0.663</td>
+</tr>
+<tr>
+<th>1</th>
+<td>2</td>
+<td>0.320</td>
+<td>1.555</td>
+<td>0.242</td>
+</tr>
+<tr>
+<th>2</th>
+<td>3</td>
+<td>0.258</td>
+<td>1.383</td>
+<td>NaN</td>
+</tr>
+<tr>
+<th>3</th>
+<td>5</td>
+<td>0.219</td>
+<td>1.305</td>
+<td>0.092</td>
+</tr>
+<tr>
+<th>4</th>
+<td>10</td>
+<td>0.180</td>
+<td>1.219</td>
+<td>0.043</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>(4) task 0, n_A = 3; true θ̃ = [-0.32  2.84] (prior log density -5.91).
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>mass with θ̃₂ &gt; 0.8 (true side)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>exact posterior</th>
+<td>0.128</td>
+</tr>
+<tr>
+<th>decoder posterior</th>
+<td>0.129</td>
+</tr>
+<tr>
+<th>exact likelihood alone</th>
+<td>0.678</td>
+</tr>
+<tr>
+<th>decoder likelihood alone</th>
+<td>0.523</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>θ̃</th>
+<th>log prior</th>
+<th>exact log lik</th>
+<th>decoder evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>true-side peak</th>
+<td>[-0.08, 2.16]</td>
+<td>-4.173877</td>
+<td>5.396668</td>
+<td>5.210084</td>
+</tr>
+<tr>
+<th>other peak</th>
+<td>[0.96, -1.2]</td>
+<td>-3.018677</td>
+<td>7.316036</td>
+<td>7.254881</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=q2">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<p><strong>Answers.</strong></p>
+<ol>
+<li><strong>A-only</strong> is the same network and weights, with B masked out. That matches the project's same-model rule (decision 0002).</li>
+<li><strong>The edges come from the prior, not the network.</strong> Each g is a tanh MLP min–max normalised on [0, 1]. So every function reaches exactly 0 and 1, and
+in about half the draws the max (or the min) is at an endpoint. At x = 0 and x = 1, about 80 % of the prior mass lies in y &lt; 0.2 or y &gt; 0.8, against
+about 40 % at x = 0.5. T fixes the endpoints, so f_A inherits this. A Bayes-correct predictive therefore pushes unobserved edges towards 0 or 1. With
+one point at the right edge (A-only, n_A = 1), the right side is pinned and the left keeps the U-shaped prior marginal. In task 0 at n_A = 10, no A
+value exceeds about 0.2, yet the max must equal 1. The only large unobserved gap is [0, 0.24], so the predictive rises to 1 there, and correctly.
+This is a strong and unrealistic feature of the prior (inherited from runs 1–2). It makes edges unusually informative and could flatter any
+method. Whether to keep it is a prior-design decision for the next pre-registration.</li>
+<li><strong>Two parameters, yet not pinned by two points.</strong> Width shrinks quickly (about 0.24 of the prior width at n_A = 2, 0.04 at n_A = 10), but because g is not
+monotone, distinct transforms can fit the same points. Separate posterior modes persist in about a quarter of tasks at n_A = 3 and about a fifth at
+n_A = 10. At J = 2, roughly J points plus a few to break mode ambiguity is the practical rule. For higher J, the directions the A points do not
+constrain stay at prior width, which matters only where predictions depend on them.</li>
+<li><strong>Weighting the wrong mode is Bayes-correct here.</strong> Both ends of the ridge fit the three points. The likelihood alone puts about two thirds of the mass on the
+true side (it is broader there), but its peak is higher on the other side, and the prior is about 3 times higher there. The true θ̃₂ = 2.84 is a 2.8 σ
+draw. The exact posterior puts 13 % on the true side, and the decoder's posterior 13 %. So the decoder reproduces the exact weighting, and the
+"wrong" mode is what an ideal learner would favour from three points.</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=r8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -9246,7 +9606,7 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">w</span> <span class="o">=</span> <span class="n">wide</span><span class="p">(</span><span class="n">nll6</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -9384,7 +9744,7 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">10.5</span><span class="p">,</span> <span class="mf">3.7</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -9430,7 +9790,7 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">tt</span> <span class="o">=</span> <span class="p">{}</span>
@@ -9635,7 +9995,7 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -9690,7 +10050,7 @@ cosine schedule ends both runs at learning rate 0, so the end of a curve is not 
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">t</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">lbl</span><span class="si">}</span><span class="s2">"</span><span class="p">:</span> <span class="n">med</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"20k"</span><span class="p">,</span> <span class="n">pf</span><span class="p">),</span> <span class="p">(</span><span class="s2">"60k"</span><span class="p">,</span> <span class="n">pf6</span><span class="p">)]</span>
