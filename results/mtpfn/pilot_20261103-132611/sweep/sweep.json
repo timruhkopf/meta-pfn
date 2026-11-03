@@ -1,0 +1,26 @@
+{
+ "id": "pilot_20261103-132611",
+ "experiment": "mtpfn",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep detached pilot experiment=mtpfn task.mode=air_train task.prior=air task.dm=128 seed=0,1,2",
+ "overrides": [
+  "experiment=mtpfn",
+  "task.mode=air_train",
+  "task.prior=air",
+  "task.dm=128",
+  "seed=0,1,2"
+ ],
+ "backend": "detached",
+ "commit": "580e30d05feb4afee4e87f749d84d950bffbe21b",
+ "branch": "exp/20-mtpfn",
+ "tag": "sweep/mtpfn/pilot_20261103-132611",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {
+  "meta-pfn": "7b8bfd279e967f03059f59577b3c9f8d3ff8a631"
+ },
+ "host": "ulysses",
+ "created": "2026-11-03T13:26:11",
+ "n_members": 3
+}

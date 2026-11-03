@@ -1,0 +1,3 @@
+{"member": 0, "overrides": ["experiment=mtpfn", "task.mode=air_train", "task.prior=air", "task.dm=128", "seed=0"]}
+{"member": 1, "overrides": ["experiment=mtpfn", "task.mode=air_train", "task.prior=air", "task.dm=128", "seed=1"]}
+{"member": 2, "overrides": ["experiment=mtpfn", "task.mode=air_train", "task.prior=air", "task.dm=128", "seed=2"]}
