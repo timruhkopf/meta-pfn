@@ -1,0 +1,38 @@
+{
+ "id": "pilot_20261103-220644",
+ "experiment": "mtpfn",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep local pilot experiment=mtpfn task.mode=air_diag task.prior=air task.dm=128 task.device=cpu task.threads=12 task.n_eval=256 seed=0 task.ckpts=mtpfn:/home/ruhkopf/PycharmProjects/meta-pfn/.claude/worktrees/mtpfn/runs/mtpfn/pilot_20261103-132611/0/tracking/artifacts/model.pt task.aonly_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/.claude/worktrees/mtpfn/runs/_ckpt/aonly_114539/0/model.pt",
+ "overrides": [
+  "experiment=mtpfn",
+  "task.mode=air_diag",
+  "task.prior=air",
+  "task.dm=128",
+  "task.device=cpu",
+  "task.threads=12",
+  "task.n_eval=256",
+  "seed=0",
+  "task.ckpts=mtpfn:/home/ruhkopf/PycharmProjects/meta-pfn/.claude/worktrees/mtpfn/runs/mtpfn/pilot_20261103-132611/0/tracking/artifacts/model.pt",
+  "task.aonly_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/.claude/worktrees/mtpfn/runs/_ckpt/aonly_114539/0/model.pt"
+ ],
+ "backend": "local",
+ "commit": "65bbd7eba34aeb597f1e3fbedaee494feaa1ad05",
+ "branch": "exp/20-mtpfn",
+ "tag": "sweep/mtpfn/pilot_20261103-220644",
+ "allow_dirty": false,
+ "host": "ruhkopf-XPS-15-9510",
+ "created": "2026-11-03T22:06:44",
+ "editable_dependencies": {
+  "meta-pfn": "35aeb0c5b0f871ef7ced9d051a17dfbc4090500e"
+ },
+ "status_counts": {
+  "DONE": 1
+ },
+ "first_start": "2026-11-03T22:06:47",
+ "last_end": "2026-11-03T22:14:29",
+ "wall_h": 0.128,
+ "device_h": 0.0,
+ "snapshot_created": "2026-11-03T22:30:40",
+ "sweep_dir": "runs/mtpfn/pilot_20261103-220644"
+}
