@@ -35,7 +35,7 @@ def _width(p: torch.Tensor, pts: torch.Tensor) -> float:
 @torch.no_grad()
 def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, seed: int, ks=(32, 128, 512, 2048),
              k_ess: int = 128, n_scan=(1, 3, 5, 10), fid_tasks: int = 32, fid_n=(1, 2, 5, 10), fine: int = 81,
-             log=print) -> pd.DataFrame:  # fmt: skip
+             log=print, g_norm: str = "minmax") -> pd.DataFrame:  # fmt: skip
     dec.eval()
     rows = []
 
@@ -44,7 +44,7 @@ def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, 
 
     g_pts = R.grid(101, device=device)
     if 2 in props:  # A
-        base = eval_tasks(2, n_tasks, seed, device)
+        base = eval_tasks(2, n_tasks, seed, device, g_norm=g_norm)
         for n in N_A_EVAL:
             t0, t = time.time(), base.head(n)
             P = t.xa.shape[0]
@@ -66,7 +66,7 @@ def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, 
             log(f"A n_a={n} {time.time() - t0:.0f}s")
     for J, q in props.items():  # B
         q.eval()
-        base = eval_tasks(J, n_tasks, seed, device)
+        base = eval_tasks(J, n_tasks, seed, device, g_norm=g_norm)
         for n in n_scan:
             t0, t = time.time(), base.head(n)
             P = t.xa.shape[0]
@@ -88,7 +88,7 @@ def diagnose(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, 
             log(f"B J={J} n_a={n} {time.time() - t0:.0f}s")
     if 2 in props:  # C
         q = props[2]
-        base = eval_tasks(2, n_tasks, seed, device)
+        base = eval_tasks(2, n_tasks, seed, device, g_norm=g_norm)
         for n in fid_n:
             t0, t = time.time(), base.head(n)
             for i in range(min(fid_tasks, t.xa.shape[0])):

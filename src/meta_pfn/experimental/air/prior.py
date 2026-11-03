@@ -1,7 +1,9 @@
 """AIR prior (docs/a2b_registration_proposal_2026-11-02.md §1, §3.1; issue #19), d = 1, batched on any device.
 
-- g: random 2-layer tanh MLP (width 32, random input and weight scales), min-max normalized to [0, 1] on a 256-point
-  grid of [0, 1];
+- g: random 2-layer tanh MLP (width 32, random input and weight scales), normalized to [0, 1] by `g_norm`:
+  "minmax" (pilot 1): each function min-max normalized on a 256-point grid, so every g attains exactly 0 and 1;
+  "ecdf" (pilot 2, the repo's standard, as pfn-repro's BNN prior): one global monotone map, the ECDF of raw outputs
+  pooled over 4000 prior draws at uniform x, applied identically to every function (`prior_ecdf`);
 - T_θ: time-1 flow of v_θ(x) = x (1 - x) Σ_j θ_j cos((j - 1) π x), θ_j = s_T / j · θ̃_j, θ̃ ~ N(0, I_J) (we work in
   the standardized θ̃ throughout, so p(θ̃) = N(0, I)); RK4 with 16 steps; the inverse integrates -v. s_T is calibrated
   per J so that E|T(x) - x| ≈ 0.13 under the prior;
@@ -31,37 +33,73 @@ class PriorCfg:
     n_q: int = 32
     sig_lo: float = 0.005
     sig_hi: float = 0.03
+    g_norm: str = "minmax"  # minmax | ecdf
 
 
 @dataclass
 class Funcs:
-    """A batch of base functions g (2-layer tanh MLPs, min-max normalized on the grid)."""
+    """A batch of base functions g (2-layer tanh MLPs). Raw output r(x) is mapped to [0, 1] either affinely,
+    (r - lo) / (hi - lo) (min-max), or, if `ecdf` is set, by the global prior ECDF (sorted raw quantiles)."""
 
     W1: torch.Tensor  # [P, H]
     b1: torch.Tensor  # [P, H]
     W2: torch.Tensor  # [P, H]
     lo: torch.Tensor  # [P]
     hi: torch.Tensor  # [P]
+    ecdf: torch.Tensor | None = None  # [S] sorted raw quantiles, shared by all functions
+
+    def raw(self, x: torch.Tensor) -> torch.Tensor:
+        return (torch.tanh(x[..., None] * self.W1[:, None] + self.b1[:, None]) @ self.W2[..., None])[..., 0]
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """x [P, M] -> g(x) [P, M]."""
-        raw = torch.tanh(x[..., None] * self.W1[:, None] + self.b1[:, None]) @ self.W2[..., None]
-        return (raw[..., 0] - self.lo[:, None]) / (self.hi - self.lo)[:, None]
+        r = self.raw(x)
+        if self.ecdf is None:
+            return (r - self.lo[:, None]) / (self.hi - self.lo)[:, None]
+        return ecdf_map(r, self.ecdf)
 
     def at(self, idx) -> "Funcs":
-        return Funcs(self.W1[idx], self.b1[idx], self.W2[idx], self.lo[idx], self.hi[idx])
+        return Funcs(self.W1[idx], self.b1[idx], self.W2[idx], self.lo[idx], self.hi[idx], self.ecdf)
 
 
-def draw_funcs(P: int, g: torch.Generator, device) -> Funcs:
+def ecdf_map(r: torch.Tensor, ref: torch.Tensor) -> torch.Tensor:
+    """Piecewise-linear ECDF on the sorted quantiles `ref` (as pfn-repro's BNNPrior.evaluate), clamped to [0, 1]."""
+    S = ref.shape[0]
+    idx = torch.searchsorted(ref, r.contiguous(), right=True).clamp(1, S - 1)
+    lo, hi = ref[idx - 1], ref[idx]
+    frac = ((r - lo) / (hi - lo + 1e-8)).clamp(0, 1)
+    return ((idx.to(r.dtype) - 1 + frac) / (S - 1)).clamp(0, 1)
+
+
+def _weights(P: int, g: torch.Generator, device):
     r = lambda *s: torch.rand(*s, generator=g, device=device)  # noqa: E731
     n = lambda *s: torch.randn(*s, generator=g, device=device)  # noqa: E731
     a = 2 + 10 * r(P, 1)  # input scale: frequency content
     W1 = n(P, WIDTH) * a
     b1 = (2 * r(P, WIDTH) - 1) * a
     W2 = n(P, WIDTH) * (0.5 + r(P, 1))
-    f = Funcs(W1, b1, W2, torch.zeros(P, device=device), torch.ones(P, device=device))
-    grid = torch.linspace(0, 1, GRID, device=device).expand(P, -1)
-    v = f(grid)
+    return W1, b1, W2
+
+
+@functools.lru_cache(maxsize=4)
+def prior_ecdf(device: str = "cpu", n_funcs: int = 4000, n_x: int = 256, n_q: int = 1001, seed: int = 20261103):
+    """Global ECDF of raw MLP outputs, pooled over `n_funcs` prior draws at `n_x` uniform x each; fixed seed, CPU, so
+    every device and run uses the same map. -> sorted quantiles [n_q]."""
+    g = torch.Generator().manual_seed(seed)
+    W1, b1, W2 = _weights(n_funcs, g, "cpu")
+    z = torch.zeros(n_funcs)
+    raw = Funcs(W1, b1, W2, z, z + 1).raw(torch.rand(n_funcs, n_x, generator=g)).flatten().sort().values
+    return raw[torch.linspace(0, raw.numel() - 1, n_q).long()].to(device)
+
+
+def draw_funcs(P: int, g: torch.Generator, device, norm: str = "minmax") -> Funcs:
+    W1, b1, W2 = _weights(P, g, device)
+    z = torch.zeros(P, device=device)
+    if norm == "ecdf":
+        return Funcs(W1, b1, W2, z, z + 1, prior_ecdf(str(device)))
+    if norm != "minmax":
+        raise ValueError(f"g_norm must be minmax or ecdf, got {norm}")
+    v = Funcs(W1, b1, W2, z, z + 1).raw(torch.linspace(0, 1, GRID, device=device).expand(P, -1))
     lo, hi = v.min(1).values, v.max(1).values
     return Funcs(W1, b1, W2, lo, torch.maximum(hi, lo + 1e-6))
 
@@ -157,7 +195,7 @@ def h_apply(v: torch.Tensor, hp: torch.Tensor) -> torch.Tensor:
 def sample_tasks(cfg: PriorCfg, P: int, n_a: int, g: torch.Generator, device) -> Tasks:
     r = lambda *s: torch.rand(*s, generator=g, device=device)  # noqa: E731
     s_t = s_t_for(cfg.J)
-    f, f2 = draw_funcs(P, g, device), draw_funcs(P, g, device)
+    f, f2 = draw_funcs(P, g, device, cfg.g_norm), draw_funcs(P, g, device, cfg.g_norm)
     theta = torch.randn(P, cfg.J, generator=g, device=device)
     z = r(P) < cfg.rho
     if cfg.h_kind == "affine":
@@ -168,8 +206,9 @@ def sample_tasks(cfg: PriorCfg, P: int, n_a: int, g: torch.Generator, device) ->
     sig_a = cfg.sig_lo + (cfg.sig_hi - cfg.sig_lo) * r(P)
     sig_b = cfg.sig_lo + (cfg.sig_hi - cfg.sig_lo) * r(P)
     xb, xa, xq = r(P, cfg.n_b), r(P, n_a), r(P, cfg.n_q)
-    ga = Funcs(*[torch.where(z[:, None] if t.dim() == 2 else z, t, t2) for t, t2 in
-                 zip((f.W1, f.b1, f.W2, f.lo, f.hi), (f2.W1, f2.b1, f2.W2, f2.lo, f2.hi), strict=True)])  # fmt: skip
+    pick = [torch.where(z[:, None] if t.dim() == 2 else z, t, t2) for t, t2 in
+            zip((f.W1, f.b1, f.W2, f.lo, f.hi), (f2.W1, f2.b1, f2.W2, f2.lo, f2.hi), strict=True)]  # fmt: skip
+    ga = Funcs(*pick, f.ecdf)
     t_aq = flow(torch.cat([xa, xq], 1), theta, s_t)
     f_aq = h_apply(ga(t_aq), hp)
     yb = f(xb) + sig_b[:, None] * torch.randn(P, cfg.n_b, generator=g, device=device)

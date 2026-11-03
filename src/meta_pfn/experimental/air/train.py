@@ -35,18 +35,17 @@ def _lr(opt, step: int, steps: int, lr: float, warm: int = 500):
 
 
 def train_decoder(dec: Decoder, steps: int, device, *, seed: int, batch: int, lr: float, j_mix, h_kind: str,
-                  every: int, metrics=None, log=print) -> pd.DataFrame:  # fmt: skip
+                  every: int, metrics=None, log=print, g_norm: str = "minmax") -> pd.DataFrame:  # fmt: skip
     g = torch.Generator(device=device).manual_seed(seed)
     rng = np.random.default_rng(seed)
-    val = sample_tasks(
-        PriorCfg(J=2, h_kind=h_kind), 256, 5, torch.Generator(device=device).manual_seed(seed + 7), device
-    )
+    vcfg = PriorCfg(J=2, h_kind=h_kind, g_norm=g_norm)
+    val = sample_tasks(vcfg, 256, 5, torch.Generator(device=device).manual_seed(seed + 7), device)
     opt = torch.optim.AdamW(dec.parameters(), lr=lr, weight_decay=1e-4)
     hist, t0 = [], time.time()
     for step in range(steps):
         _lr(opt, step, steps, lr)
         J, n = int(rng.choice(j_mix)), int(rng.integers(1, 11))
-        t = sample_tasks(PriorCfg(J=J, h_kind=h_kind), batch, n, g, device)
+        t = sample_tasks(PriorCfg(J=J, h_kind=h_kind, g_norm=g_norm), batch, n, g, device)
         xb_t = t.b_in_a(t.theta)
         dec.train()
         lt = decoder_loss(dec, xb_t, t.yb, t.xa, t.ya, t.xq, t.fa, t.fq, t.sig_a)
@@ -77,10 +76,10 @@ def val_decoder(dec: Decoder, t: Tasks) -> dict:
 
 
 def train_proposal(q: Proposal, J: int, steps: int, device, *, seed: int, batch: int, lr: float, h_kind: str,
-                   every: int, metrics=None, log=print) -> pd.DataFrame:  # fmt: skip
+                   every: int, metrics=None, log=print, g_norm: str = "minmax") -> pd.DataFrame:  # fmt: skip
     g = torch.Generator(device=device).manual_seed(seed)
     rng = np.random.default_rng(seed)
-    cfg = PriorCfg(J=J, h_kind=h_kind)
+    cfg = PriorCfg(J=J, h_kind=h_kind, g_norm=g_norm)
     val = sample_tasks(cfg, 512, 5, torch.Generator(device=device).manual_seed(seed + 7), device)
     opt = torch.optim.AdamW(q.parameters(), lr=lr, weight_decay=1e-4)
     hist, t0 = [], time.time()
@@ -107,23 +106,23 @@ def train_proposal(q: Proposal, J: int, steps: int, device, *, seed: int, batch:
     return pd.DataFrame(hist)
 
 
-def eval_tasks(J: int, n_tasks: int, seed: int, device, h_kind: str = "id") -> Tasks:
+def eval_tasks(J: int, n_tasks: int, seed: int, device, h_kind: str = "id", g_norm: str = "minmax") -> Tasks:
     """Fixed evaluation tasks per J (nested in n_A: the first n of 10 A points)."""
-    return sample_tasks(PriorCfg(J=J, h_kind=h_kind), n_tasks, max(N_A_EVAL),
+    return sample_tasks(PriorCfg(J=J, h_kind=h_kind, g_norm=g_norm), n_tasks, max(N_A_EVAL),
                         torch.Generator(device=device).manual_seed(seed + 101 * J), device)  # fmt: skip
 
 
 @torch.no_grad()
 def evaluate(dec: Decoder, props: dict[int, Proposal], device, *, n_tasks: int, seed: int, ks=(8, 32, 128),
              k_ref: int = 4096, k_exact: int = 10_000, n_sbc: int = 255, fid_tasks: int = 32,
-             fid_n=(1, 2, 5, 10), log=print) -> tuple[pd.DataFrame, pd.DataFrame]:  # fmt: skip
+             fid_n=(1, 2, 5, 10), log=print, g_norm: str = "minmax") -> tuple[pd.DataFrame, pd.DataFrame]:  # fmt: skip
     dec.eval()
     nll_rows, diag_rows = [], []
     g_pts = R.grid(101, device=device)
     g_fid = R.grid(41, device=device)
     for J, q in props.items():
         q.eval()
-        base = eval_tasks(J, n_tasks, seed, device)
+        base = eval_tasks(J, n_tasks, seed, device, g_norm=g_norm)
         for n in N_A_EVAL:
             t0 = time.time()
             t = base.head(n)

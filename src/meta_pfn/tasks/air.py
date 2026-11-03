@@ -33,7 +33,8 @@ def air(cfg: DictConfig, run: Run) -> float:
     if t.mode == "decoder":
         dec = Decoder(D=t.dm, layers=t.layers).to(dev)
         hist = Tr.train_decoder(dec, t.steps, dev, seed=cfg.seed, batch=t.batch, lr=t.lr, j_mix=list(t.j_mix),
-                                h_kind=t.h_kind, every=t.every, metrics=run.log_metrics, log=log)  # fmt: skip
+                                h_kind=t.h_kind, every=t.every, metrics=run.log_metrics, log=log,
+                                g_norm=t.g_norm)  # fmt: skip
         run.log_table("train", hist)
         torch.save(dec.state_dict(), run.artifacts / "model.pt")
         score = float(hist.val_teacher_n5.iloc[-1])
@@ -55,7 +56,7 @@ def air(cfg: DictConfig, run: Run) -> float:
             props[int(J)] = q
         if t.mode == "diagnose":
             tab = diagnose(dec, props, dev, n_tasks=t.n_eval, seed=t.eval_seed, ks=tuple(t.diag_ks),
-                           fid_tasks=t.fid_tasks, log=log)  # fmt: skip
+                           fid_tasks=t.fid_tasks, log=log, g_norm=t.g_norm)  # fmt: skip
             run.log_table("pfail", tab)
             run.log_summary(**{M.TIME_PREFIX + "total_s": time.time() - t0})
             return float(len(tab))
@@ -73,7 +74,7 @@ def air(cfg: DictConfig, run: Run) -> float:
                          "inv_err": float((inv - x).abs().max())})  # fmt: skip
         run.log_table("prior", pd.DataFrame(rows))
         nll, diag = Tr.evaluate(dec, props, dev, n_tasks=t.n_eval, seed=t.eval_seed, ks=tuple(t.ks), k_ref=t.k_ref,
-                                k_exact=t.k_exact, fid_tasks=t.fid_tasks, log=log)  # fmt: skip
+                                k_exact=t.k_exact, fid_tasks=t.fid_tasks, log=log, g_norm=t.g_norm)  # fmt: skip
         run.log_table("nll", nll)
         run.log_table("diag", diag)
         m = nll[(min(props) == nll.J) & (nll.n_a == 5)]

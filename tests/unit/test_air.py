@@ -73,3 +73,18 @@ def test_estimator_shapes_and_proposal_mixture() -> None:
     assert bool(((r["ess"] > 0) & (r["ess"] <= 1 + 1e-6)).all())
     ev, _, sd = decode(dec, t, t.theta[:, None], n_perm=3)
     assert ev.shape == (3, 1) and sd.shape == (3, 1)
+
+
+def test_ecdf_prior_is_global_and_does_not_force_extremes() -> None:
+    """g_norm = ecdf (pilot 2): one fixed monotone map for all functions; values in [0, 1]; extremes not forced."""
+    g = torch.Generator().manual_seed(7)
+    f = Pr.draw_funcs(500, g, "cpu", "ecdf")
+    x = torch.linspace(0, 1, 256).expand(500, -1)
+    v = f(x)
+    assert float(v.min()) >= 0 and float(v.max()) <= 1
+    assert float((v.max(1).values > 0.99).float().mean()) < 0.2  # min-max would give 1.0
+    assert torch.equal(Pr.prior_ecdf("cpu"), Pr.prior_ecdf("cpu"))  # cached, deterministic
+    r = f.raw(x)
+    assert bool(((v.diff(dim=1) >= -1e-6) == (r.diff(dim=1) >= -1e-6)).float().mean() > 0.99)  # monotone in raw
+    t = Pr.sample_tasks(Pr.PriorCfg(J=2, n_b=16, n_q=4, g_norm="ecdf"), 3, 4, torch.Generator().manual_seed(8), "cpu")
+    assert t.g.ecdf is not None and t.g.at(torch.tensor([0, 1])).ecdf is not None

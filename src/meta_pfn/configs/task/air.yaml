@@ -3,6 +3,7 @@
 name: air
 mode: decoder           # decoder | proposal | eval | diagnose
 h_kind: id              # H0
+g_norm: minmax          # minmax (pilot 1) | ecdf (pilot 2: global prior ECDF, the repo standard)
 J: 2                    # proposal: transform dimension
 j_mix: [2, 4, 8, 16]    # decoder: J per batch drawn from this list (the decoder sees θ only through B_inA)
 dm: 128                 # decoder width (spec: 6 layers, d_model 128, 4 heads)
