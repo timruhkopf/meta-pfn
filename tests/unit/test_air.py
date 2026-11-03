@@ -88,3 +88,15 @@ def test_ecdf_prior_is_global_and_does_not_force_extremes() -> None:
     assert bool(((v.diff(dim=1) >= -1e-6) == (r.diff(dim=1) >= -1e-6)).float().mean() > 0.99)  # monotone in raw
     t = Pr.sample_tasks(Pr.PriorCfg(J=2, n_b=16, n_q=4, g_norm="ecdf"), 3, 4, torch.Generator().manual_seed(8), "cpu")
     assert t.g.ecdf is not None and t.g.at(torch.tensor([0, 1])).ecdf is not None
+
+
+def test_pipeline_passes_g_norm_to_every_stage() -> None:
+    """Regression (pilot 2, 2026-11-03): the proposal call once dropped task.g_norm and trained under min-max."""
+    import inspect
+
+    from meta_pfn.tasks import air as task_air
+
+    src = inspect.getsource(task_air.air)
+    for call in ("train_decoder(", "train_proposal(", "diagnose(", "Tr.evaluate("):
+        seg = src[src.index(call) :]
+        assert "g_norm=t.g_norm" in seg[: seg.index(")  # fmt: skip")], call

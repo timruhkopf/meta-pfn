@@ -41,7 +41,7 @@ def air(cfg: DictConfig, run: Run) -> float:
     elif t.mode == "proposal":
         q = Proposal(t.J).to(dev)
         hist = Tr.train_proposal(q, t.J, t.steps, dev, seed=cfg.seed, batch=t.batch, lr=t.lr, h_kind=t.h_kind,
-                                 every=t.every, metrics=run.log_metrics, log=log)  # fmt: skip
+                                 every=t.every, metrics=run.log_metrics, log=log, g_norm=t.g_norm)  # fmt: skip
         run.log_table("train", hist)
         torch.save(q.state_dict(), run.artifacts / "model.pt")
         score = float(hist.val_nll_n5.iloc[-1])
