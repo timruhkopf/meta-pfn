@@ -1,7 +1,7 @@
 # AIR: amortised importance sampling over an explicit transform latent (tasks/air.py; issue #19, notebook 10).
 # Spec: docs/a2b_registration_proposal_2026-11-02.md. Prior §1 (2-layer tanh MLP g, N_B = 128, noise C2', H0, Z0).
 name: air
-mode: decoder           # decoder | proposal | eval | diagnose
+mode: decoder           # decoder | proposal | eval | diagnose; pilot 3: decoder_rb | aonly | proposal_rb | eval_rb
 h_kind: id              # H0
 g_norm: minmax          # minmax (pilot 1) | ecdf (pilot 2: global prior ECDF, the repo standard)
 J: 2                    # proposal: transform dimension
@@ -23,3 +23,9 @@ eval_seed: 777
 diag_ks: [32, 128, 512, 2048]  # diagnose (post hoc): K scan
 device: cuda
 threads: 4
+# pilot 3 (experiment air_rb; experimental/air/train_rb.py)
+sig_list: [0.0, 0.1, 0.3, 1.0]  # Σ of θ_c = θ̃ + √Σ ε (per-task mixture in training; the sweep in evaluation)
+max_steps: 100000       # cap of the plateau rule
+clip_d: 1.0             # decoder / A-only gradient clip
+clip_q: 20.0            # proposal gradient clip (pilot 1: 1.0, which shrank every step 6-36x)
+aonly_ckpt: ""          # eval_rb: the clean A-only PFN

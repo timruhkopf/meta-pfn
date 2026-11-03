@@ -81,8 +81,11 @@ def build_mask(n_b: int, n: int, Q: int, rank: torch.Tensor, use_b: bool) -> tor
 
 
 class Decoder(nn.Module):
-    def __init__(self, D: int = 128, layers: int = 6, heads: int = 4):
+    def __init__(self, D: int = 128, layers: int = 6, heads: int = 4, sig_cond: bool = False):
         super().__init__()
+        self.sig_cond = sig_cond
+        if sig_cond:  # pilot 3: Σ of the noisy transform view θ_c, added to every token
+            self.emb_s = nn.Linear(2, D)
         fx = 1 + 2 * N_FREQ
         self.emb_x, self.emb_y = nn.Linear(fx, D), nn.Linear(fx, D)
         self.src = nn.Parameter(torch.randn(4, D) * 0.02)  # B, A, query, evidence-query
@@ -90,7 +93,8 @@ class Decoder(nn.Module):
         self.blocks = nn.ModuleList([Block(D, heads) for _ in range(layers)])
         self.ln, self.head = nn.LayerNorm(D), nn.Linear(D, N_BINS)
 
-    def forward(self, xb_t, yb, xa, ya, xq, rank: torch.Tensor | None = None, use_b: bool = True):
+    def forward(self, xb_t, yb, xa, ya, xq, rank: torch.Tensor | None = None, use_b: bool = True,
+                sig: torch.Tensor | None = None):  # fmt: skip
         """xb_t: B's inputs already in A's frame [P, N_B]; A [P, n]; queries [P, Q]; rank [P, n] (random if None).
         -> (logits at x* [P, Q, G], evidence logits at x_a [P, n, G])."""
         P, n_b, n, Q = xb_t.shape[0], xb_t.shape[1], xa.shape[1], xq.shape[1]
@@ -103,6 +107,9 @@ class Decoder(nn.Module):
             self.emb_x(fourier(xq)) + self.src[2],
             self.emb_x(fourier(xa)) + self.src[3],
         ], 1)  # fmt: skip
+        if self.sig_cond:
+            s = torch.zeros(P, device=xa.device) if sig is None else sig.to(xa.dtype).expand(P)
+            tok = tok + self.emb_s(sig_feat(s))[:, None]
         mask = build_mask(n_b, n, Q, rank, use_b)
         for blk in self.blocks:
             tok = blk(tok, mask)
@@ -111,9 +118,15 @@ class Decoder(nn.Module):
         return out[:, s : s + Q], out[:, s + Q :]
 
 
-def decoder_loss(dec: Decoder, xb_t, yb, xa, ya, xq, fa, fq, sig, use_b: bool = True) -> torch.Tensor:
-    """Soft-target CE on x* and on the evidence queries (mean per token)."""
-    lq, le = dec(xb_t, yb, xa, ya, xq, use_b=use_b)
+def sig_feat(s: torch.Tensor) -> torch.Tensor:
+    """Σ [P] -> features [P, 2]: (Σ, log(Σ + 0.01))."""
+    return torch.stack([s, torch.log(s + 0.01)], -1)
+
+
+def decoder_loss(dec: Decoder, xb_t, yb, xa, ya, xq, fa, fq, sig, use_b: bool = True,
+                 sig_c: torch.Tensor | None = None) -> torch.Tensor:  # fmt: skip
+    """Soft-target CE on x* and on the evidence queries (mean per token). sig = σ_A (targets); sig_c = Σ (pilot 3)."""
+    lq, le = dec(xb_t, yb, xa, ya, xq, use_b=use_b, sig=sig_c)
     tq = soft_targets(fq, sig)
     loss = -(tq * lq.log_softmax(-1)).sum(-1).mean()
     if xa.shape[1]:

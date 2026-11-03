@@ -16,6 +16,7 @@ from omegaconf import DictConfig
 from ..evaluation import metric_names as M
 from ..experimental.air import prior as Pr
 from ..experimental.air import train as Tr
+from ..experimental.air import train_rb as RB
 from ..experimental.air.decoder import Decoder
 from ..experimental.air.diagnose import diagnose
 from ..experimental.air.proposal import Proposal
@@ -45,6 +46,39 @@ def air(cfg: DictConfig, run: Run) -> float:
         run.log_table("train", hist)
         torch.save(q.state_dict(), run.artifacts / "model.pt")
         score = float(hist.val_nll_n5.iloc[-1])
+    elif t.mode in ("decoder_rb", "aonly"):  # pilot 3 (experiment air_rb)
+        dec = Decoder(D=t.dm, layers=t.layers, sig_cond=t.mode == "decoder_rb").to(dev)
+        hist = RB.train_decoder_rb(dec, t.max_steps, dev, seed=cfg.seed, batch=t.batch, lr=t.lr, j_mix=list(t.j_mix),
+                                   sig_list=list(t.sig_list), g_norm=t.g_norm, clip=t.clip_d, aonly=t.mode == "aonly",
+                                   every=t.every, metrics=run.log_metrics, log=log)  # fmt: skip
+        run.log_table("train", hist)
+        torch.save(dec.state_dict(), run.artifacts / "model.pt")
+        score = float(hist.val_aonly_n5.iloc[-1] if t.mode == "aonly" else hist.val_teacher_n5.iloc[-1])
+    elif t.mode == "proposal_rb":
+        q = Proposal(t.J, sig_cond=True).to(dev)
+        hist = RB.train_proposal_rb(q, t.J, t.max_steps, dev, seed=cfg.seed, batch=t.batch, lr=t.lr,
+                                    sig_list=list(t.sig_list), g_norm=t.g_norm, clip=t.clip_q, every=t.every,
+                                    metrics=run.log_metrics, log=log)  # fmt: skip
+        run.log_table("train", hist)
+        torch.save(q.state_dict(), run.artifacts / "model.pt")
+        score = float(hist.val_nll_n5.iloc[-1])
+    elif t.mode == "eval_rb":
+        dec = Decoder(D=t.dm, layers=t.layers, sig_cond=True).to(dev)
+        dec.load_state_dict(torch.load(t.decoder_ckpt, map_location=dev))
+        ao = Decoder(D=t.dm, layers=t.layers).to(dev)
+        ao.load_state_dict(torch.load(t.aonly_ckpt, map_location=dev))
+        props = {}
+        for item in str(t.proposal_ckpts).split(","):
+            J, path = item.split(":", 1)
+            q = Proposal(int(J), sig_cond=True).to(dev)
+            q.load_state_dict(torch.load(path, map_location=dev))
+            props[int(J)] = q
+        nll, diag = RB.evaluate_rb(dec, props, ao, dev, sig_list=list(t.sig_list), n_tasks=t.n_eval,
+                                   seed=t.eval_seed, g_norm=t.g_norm, k_ref=t.k_ref, log=log)  # fmt: skip
+        run.log_table("nll", nll)
+        run.log_table("diag", diag)
+        m = nll[(min(props) == nll.J) & (nll.n_a == 5) & (nll.sig == 0) & (nll.method == "qis32")]
+        score = float(m.nll.mean())
     elif t.mode in ("eval", "diagnose"):
         dec = Decoder(D=t.dm, layers=t.layers).to(dev)
         dec.load_state_dict(torch.load(t.decoder_ckpt, map_location=dev))
@@ -80,6 +114,6 @@ def air(cfg: DictConfig, run: Run) -> float:
         m = nll[(min(props) == nll.J) & (nll.n_a == 5)]
         score = float(m.loc[m.method == "qis32", "nll"].mean())
     else:
-        raise ValueError(f"task.mode must be decoder, proposal, eval or diagnose, got {t.mode}")
+        raise ValueError(f"unknown task.mode {t.mode}")
     run.log_summary(**{M.AIR_SCORE: score, M.TIME_PREFIX + "total_s": time.time() - t0})
     return score

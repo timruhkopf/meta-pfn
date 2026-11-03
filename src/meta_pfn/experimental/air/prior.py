@@ -150,6 +150,14 @@ def log_prior(theta: torch.Tensor) -> torch.Tensor:
     return -0.5 * (theta**2).sum(-1) - 0.5 * J * math.log(2 * math.pi)
 
 
+def log_prior_s(theta: torch.Tensor, sig) -> torch.Tensor:
+    """log N(θ_c; 0, (1 + Σ) I): the marginal of θ_c = θ̃ + √Σ ε (pilot 3, Rao-Blackwellised latent). sig broadcastable
+    to theta[..., 0] (a float or a tensor); sig = 0 is `log_prior`."""
+    v = 1.0 + torch.as_tensor(sig, dtype=theta.dtype, device=theta.device)
+    J = theta.shape[-1]
+    return log_prior(theta / v.sqrt()[..., None]) - 0.5 * J * torch.log(v)
+
+
 # ---- tasks -----------------------------------------------------------------------------------------------------------
 
 

@@ -99,3 +99,39 @@ def test_pipeline_passes_g_norm_to_every_stage() -> None:
     for call in ("train_decoder(", "train_proposal(", "diagnose(", "Tr.evaluate("):
         seg = src[src.index(call) :]
         assert "g_norm=t.g_norm" in seg[: seg.index(")  # fmt: skip")], call
+
+
+def test_pilot3_sigma_prior_qmc_and_plateau() -> None:
+    """Pilot 3: log N(θ_c; 0, (1 + Σ) I); Σ = 0 is the pilot-1 prior; QMC draws keep the mixture split and finite
+    densities; the plateau rule anneals once the validation NLL stops improving."""
+    from scipy.stats import multivariate_normal
+
+    from meta_pfn.experimental.air.train_rb import Plateau
+
+    th = torch.randn(5, 3, generator=torch.Generator().manual_seed(0))
+    ref = multivariate_normal(mean=[0, 0, 0], cov=1.3 * torch.eye(3).numpy()).logpdf(th.numpy())
+    assert torch.allclose(Pr.log_prior_s(th, 0.3), torch.tensor(ref, dtype=th.dtype), atol=1e-5)
+    assert torch.allclose(Pr.log_prior_s(th, 0.0), Pr.log_prior(th))
+    q = Proposal(2, sig_cond=True)
+    x = torch.rand(3, 8)
+    th, lq = q.sample_mix(x, x, x[:, :2], x[:, :2], 20, sig=0.3, qmc=True, seed=1)
+    assert th.shape == (3, 20, 2) and bool(torch.isfinite(lq).all())
+    pl = Plateau(1e-3, max_steps=100_000)
+    for s in range(0, 40_001, 250):
+        pl.observe(s, 2.0 if s <= 3000 else 1.0)
+    assert pl.start == 10_000 and pl.done(15_000) and not pl.done(14_750)
+
+
+def test_sigma_conditioned_decoder_masks_still_hold() -> None:
+    torch.manual_seed(0)
+    dec = Decoder(D=32, layers=2, sig_cond=True).eval()
+    t = Pr.sample_tasks(Pr.PriorCfg(J=2, n_b=16, n_q=4), 2, 3, torch.Generator().manual_seed(9), "cpu")
+    rank = torch.arange(3).expand(2, -1)
+    s = torch.tensor([0.0, 1.0])
+    _, e1 = dec(t.xb, t.yb, t.xa, t.ya, t.xq, rank=rank, sig=s)
+    ya2 = t.ya.clone()
+    ya2[:, 2] += 0.5  # the last point's value must not reach any evidence query
+    _, e2 = dec(t.xb, t.yb, t.xa, ya2, t.xq, rank=rank, sig=s)
+    assert torch.allclose(e1, e2, atol=1e-5)
+    _, e3 = dec(t.xb, t.yb, t.xa, t.ya, t.xq, rank=rank, sig=torch.tensor([0.3, 0.3]))
+    assert not torch.allclose(e1, e3)  # Σ reaches the network
