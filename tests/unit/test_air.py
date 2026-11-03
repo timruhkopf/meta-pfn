@@ -92,11 +92,10 @@ def test_ecdf_prior_is_global_and_does_not_force_extremes() -> None:
 
 def test_pipeline_passes_g_norm_to_every_stage() -> None:
     """Regression (pilot 2, 2026-11-03): the proposal call once dropped task.g_norm and trained under min-max."""
+    import importlib
     import inspect
 
-    from meta_pfn.tasks import air as task_air
-
-    src = inspect.getsource(task_air.air)
+    src = inspect.getsource(importlib.import_module("meta_pfn.tasks.air").air)
     for call in ("train_decoder(", "train_proposal(", "diagnose(", "Tr.evaluate("):
         seg = src[src.index(call) :]
         assert "g_norm=t.g_norm" in seg[: seg.index(")  # fmt: skip")], call
