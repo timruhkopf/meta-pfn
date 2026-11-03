@@ -1,0 +1,16 @@
+# @package _global_
+# Tiny MTPFN run for tests (arm R training, CPU).
+defaults:
+  - override /task: mtpfn
+
+name: mtpfn_smoke
+task:
+  dm: 32
+  n_pairs: 1
+  d_ff: 64
+  steps: 3
+  batch: 4
+  every: 1
+  n_range: [5, 20]
+  q: 4
+  device: cpu

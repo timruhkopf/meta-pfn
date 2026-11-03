@@ -1,0 +1,7 @@
+# @package _global_
+# MTPFN baseline (issue #20, notebook 12): the hierarchical multi-task PFN of Li et al. (SPIGM @ NeurIPS 2025),
+# arm R on the paper's robust ICM prior, arm A on the AIR A→B prior. See configs/task/mtpfn.yaml.
+defaults:
+  - override /task: mtpfn
+
+name: mtpfn

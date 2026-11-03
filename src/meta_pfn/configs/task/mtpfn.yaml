@@ -1,0 +1,45 @@
+# MTPFN baseline (tasks/mtpfn.py; issue #20, notebook 12). Paper: Li, Daulton, Müller, Wilson, Bakshy,
+# "Robust Transfer for Bayesian Optimization with Prior-Data Fitted Networks" (SPIGM @ NeurIPS 2025).
+name: mtpfn
+mode: icm_train         # icm_train | icm_ref | icm_eval | air_train | air_eval
+prior: icm              # icm (arm R) | air (arm A)
+# model (paper: 12 intra + 11 inter blocks, width 512, 4 heads)
+dm: 256
+heads: 4
+n_pairs: 4              # N x [intra, inter] + a final intra
+d_ff: 512
+head: bar               # bar (pfn-repro) | gauss (μ, σ²; the paper's Fig. 2)
+n_bins: 400             # arm R bar support (arm A uses AIR's: 400 bins on [-0.25, 1.25])
+y_lo: -5.0
+y_hi: 5.0
+# training (paper: AdamW 1e-4, cosine annealing, batch 16, ~50M datasets)
+steps: 100000
+batch: 64
+lr: 1e-4
+warmup: 1000
+clip: 1.0
+every: 500
+# arm R prior (Alg. A.1; A.2 with ard)
+p: 0.2
+ard: false
+t_range: [2, 5]         # tasks per dataset, target included
+d_max: 3
+n_range: [10, 100]      # points per dataset (all tasks), Dirichlet(1) proportions
+q: 32                   # target queries per training dataset
+# arm R evaluation (paper Fig. A.1/A.2: 5 target points, 20 per source, 3 sources)
+t_eval: 4
+n_src: 20
+eval_d: [1, 3]
+eval_n_target: [1, 2, 5, 10]
+q_eval: 50
+n_eval: 128
+p_ref: 0.2              # the references' prior p
+k_ref: 1024             # hyperparameter draws per dataset (x 2^(T-1) masks)
+# arm A (AIR prior; pilot 3's evaluation: eval_tasks(J, 256, 777, ecdf), n_A in N_A_RB)
+j_mix: [2, 4, 8, 16]
+g_norm: ecdf
+eval_j: [2, 16]
+eval_seed: 777
+ckpts: ""               # icm_eval / air_eval: "name:path,..." (a name containing "gauss" loads the Gaussian head)
+device: cuda
+threads: 4

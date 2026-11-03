@@ -12,6 +12,7 @@ from .gwonly import gwonly
 from .headroom import headroom
 from .ladder import ladder
 from .metapfn import metapfn
+from .mtpfn import mtpfn
 from .outmap import outmap
 from .regpfn import regpfn
 from .sampler_check import sampler_check
@@ -27,6 +28,7 @@ TASKS: dict[str, Pipeline] = {
     "headroom": headroom,
     "ladder": ladder,
     "metapfn": metapfn,
+    "mtpfn": mtpfn,
     "outmap": outmap,
     "regpfn": regpfn,
     "sampler_check": sampler_check,
