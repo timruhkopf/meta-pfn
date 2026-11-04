@@ -10,6 +10,7 @@
   J > 0, z_w, z_c); inactive entries are 0.
 - h: identity with probability PI_ID, else a + b v, b ~ U[0.3, 1], a ~ U[0, 1 − b] (D2).
 - y_b = g(x_b) + ε_b, y_a = h(g(T(x_a))) + ε_a, σ_A, σ_B ~ U[0.005, 0.03]; always related; designs uniform.
+- RK4 states are clamped to [0, 1] (the exact flow never leaves it; this only defines T where RK4 diverges).
 - B in A's frame: T⁻¹(x_b) = Φ̄⁻¹((x_b − c)/w), Φ̄ = Φ on [0, 1] and the identity outside; the decoder's T′ feature
   is log (T⁻¹)′(x_b) (the log-derivative integrated along the inverse flow, minus log w).
 """
@@ -189,10 +190,12 @@ def flow(x: torch.Tensor, th: torch.Tensor, s: torch.Tensor, inverse: bool = Fal
         k2, d2 = _v_and_dv(x + 0.5 * h * k1, coef)
         k3, d3 = _v_and_dv(x + 0.5 * h * k2, coef)
         k4, d4 = _v_and_dv(x + h * k3, coef)
-        x = x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+        x = torch.nan_to_num(x + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4), nan=0.5, posinf=1.0, neginf=0.0).clamp(0, 1)
         if logdet:
             ld = ld + h / 6 * (d1 + 2 * d2 + 2 * d3 + d4)
-    return (x, ld) if logdet else x
+    # The exact flow keeps [0, 1]; the clamp only matters where RK4 diverges (very large s_T, e.g. widened proposal
+    # draws), making T_θ defined and finite for every θ, identically in the prior, the proposals and the oracle.
+    return (x, torch.nan_to_num(ld, nan=0.0, posinf=30.0, neginf=-30.0)) if logdet else x
 
 
 @functools.lru_cache(maxsize=8)
@@ -409,3 +412,19 @@ def stretch_stats(dx: torch.Tensor, tab: dict):
     fr = z - lo
     m, s = tab["m_k"].to(dx.device), tab["s_k"].to(dx.device)
     return m[lo] + fr * (m[lo + 1] - m[lo]), s[lo] + fr * (s[lo + 1] - s[lo])
+
+
+def retransform(t: CisTasks, lat: torch.Tensor, J: torch.Tensor, g: torch.Generator, hid: bool | None = None,
+                noise: float | None = None) -> CisTasks:  # fmt: skip
+    """The same g, B and designs with A regenerated under the given transform latents (toys and tests); h forced to
+    the identity if hid, σ_A fixed to `noise` if given."""
+    P, n = t.xa.shape
+    hp, hidv = t.hp, t.hid
+    if hid:
+        hp = torch.tensor([[0.0, 1.0]], device=t.xa.device).expand(P, 2).clone()
+        hidv = torch.ones(P, dtype=torch.bool, device=t.xa.device)
+    sig = t.sig_a if noise is None else torch.full_like(t.sig_a, noise)
+    f_aq = hp[:, :1] + hp[:, 1:] * t.g(transform(torch.cat([t.xa, t.xq], 1), lat, J))
+    y = f_aq + sig[:, None] * torch.randn(f_aq.shape, generator=g, device=f_aq.device)
+    return replace(t, ya=y[:, :n], yq=y[:, n:], fa=f_aq[:, :n], fq=f_aq[:, n:], lat=lat, J=J, hid=hidv, hp=hp,
+                   sig_a=sig)  # fmt: skip
