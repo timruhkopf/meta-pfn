@@ -26,4 +26,5 @@ METAPFN_GAIN_N5 = "final/gain_n5"  # metapfn: NLL(A-only PFN) - NLL(model) at n_
 LADDER_S0_GAIN_N2 = "final/s0_gain_n2"  # ladder: NLL(a_only) - NLL(oracle_q), shift stratum, n_A = 2
 A2B_NLL_N5 = "final/nll_n5"  # a2b: model mixture NLL on A queries, warp stratum, n_A = 5, last step
 MTPFN_SCORE = "final/mtpfn_score"  # mtpfn: train val NLL | icm_eval mean NLL (1st model) | air_eval NLL (J min, n_A=5)
+AIR_CIS_SCORE = "final/air_cis_score"  # air_cis: train val NLL | eval: CIS-U (R = 3, K = 128) NLL at n_A = 3
 AIR_SCORE = "final/score"  # air: decoder val NLL (teacher, n_A=5) | proposal val NLL | eval q-IS32 NLL (J min, n_A=5)

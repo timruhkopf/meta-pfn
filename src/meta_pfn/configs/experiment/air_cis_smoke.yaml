@@ -1,0 +1,15 @@
+# @package _global_
+# Tiny decoder training on the AIR-CIS prior, for tests.
+defaults:
+  - override /task: air_cis
+
+name: air_cis_smoke
+task:
+  mode: dec_train
+  dm: 32
+  layers: 1
+  batch: 4
+  max_steps: 3
+  min_steps: 1
+  every: 1
+  device: cpu

@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from ..tracking.sink import Run
 from .a2b import a2b
 from .air import air
+from .air_cis import air_cis
 from .fieldonly import fieldonly
 from .gwonly import gwonly
 from .headroom import headroom
@@ -23,6 +24,7 @@ Pipeline = Callable[[DictConfig, Run], float | None]
 TASKS: dict[str, Pipeline] = {
     "a2b": a2b,
     "air": air,
+    "air_cis": air_cis,
     "fieldonly": fieldonly,
     "gwonly": gwonly,
     "headroom": headroom,
