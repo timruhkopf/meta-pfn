@@ -324,16 +324,62 @@ def _log_n01(th: torch.Tensor) -> torch.Tensor:
 
 
 @torch.no_grad()
+def smc_theta(t: HDTasks, j: int, pi_id: float, bg: torch.Tensor, K: int, g: torch.Generator, n_mh: int = 5,
+              target: float = 0.5, max_steps: int = 200) -> tuple[torch.Tensor, dict]:  # fmt: skip
+    """Likelihood-tempered SMC from the N(0, I) prior: adaptive temperatures (each reweight keeps ESS = target · K),
+    multinomial resampling, n_mh random-walk MH moves per temperature (proposal from the particles' covariance,
+    scale adapted to the acceptance rate), 2 n_mh at β = 1. -> (θ [K, J] equally weighted, diagnostics)."""
+    dev, J = t.xa.device, t.theta.shape[1]
+    th = torch.randn(K, J, generator=g, device=dev)
+    L = torch.nan_to_num(_lik(t, j, th, pi_id, bg), nan=-math.inf)
+    beta, sc, steps, ess_min, accs = 0.0, 1.0, 0, float(K), []
+
+    def ess_of(db: float) -> float:
+        w = db * L
+        return float(torch.exp(-torch.logsumexp(2 * (w - torch.logsumexp(w, 0)), 0)))
+
+    while beta < 1 and steps < max_steps:
+        lo, hi = 0.0, 1.0 - beta
+        if ess_of(hi) < target * K:
+            for _ in range(40):
+                mid = 0.5 * (lo + hi)
+                lo, hi = (mid, hi) if ess_of(mid) >= target * K else (lo, mid)
+            hi = max(lo, 1e-6)
+        ess_min = min(ess_min, ess_of(hi))
+        beta = 1.0 if beta + hi >= 1 - 1e-9 else beta + hi
+        w = hi * L
+        idx = torch.multinomial((w - torch.logsumexp(w, 0)).exp(), K, replacement=True, generator=g)
+        th, L = th[idx], L[idx]
+        ch = torch.linalg.cholesky(torch.cov(th.T).reshape(J, J) + 1e-8 * torch.eye(J, device=dev))
+        for _ in range(n_mh * (2 if beta >= 1 else 1)):
+            prop = th + (2.38 / math.sqrt(J)) * sc * torch.randn(K, J, generator=g, device=dev) @ ch.T
+            Lp = torch.nan_to_num(_lik(t, j, prop, pi_id, bg), nan=-math.inf)
+            la = _log_n01(prop) + beta * Lp - _log_n01(th) - beta * L
+            acc = torch.log(torch.rand(K, generator=g, device=dev)) < la
+            th, L = torch.where(acc[:, None], prop, th), torch.where(acc, Lp, L)
+            a = float(acc.float().mean())
+            accs.append(a)
+            sc *= 0.7 if a < 0.15 else (1.3 if a > 0.4 else 1.0)
+        steps += 1
+    return th, {"ess_min": ess_min, "steps": steps, "acc": sum(accs) / max(len(accs), 1), "beta": beta}
+
+
+@torch.no_grad()
 def posterior_theta(t: HDTasks, j: int, pi_id: float, *, nb: int = 2048, k_is: int = 16384, stages: int = 4,
-                    g: torch.Generator | None = None,
-                    force_is: bool = False) -> tuple[torch.Tensor, torch.Tensor, float]:  # fmt: skip
-    """-> (θ particles [K, J], normalized log weights [K], ESS). d = 1: the 101² grid (J = 2); d = 2: adaptive IS."""
+                    g: torch.Generator | None = None, force_is: bool = False,
+                    method: str = "auto") -> tuple[torch.Tensor, torch.Tensor, float]:  # fmt: skip
+    """-> (θ particles [K, J], normalized log weights [K], ESS). method: auto = the 101² grid at d = 1, J = 2 without
+    the window, else SMC; "is" = adaptive importance sampling (the first runs' d = 2 oracle; fails in 8 dims)."""
     dev = t.xa.device
     bg = b_grid(nb, dev)
     J = t.theta.shape[1]
-    if t.d == 1 and J == 2 and not t.window and not force_is:
+    if method == "auto" and t.d == 1 and J == 2 and not t.window and not force_is:
         th = R.grid(101, device=str(dev))
         lw = _log_n01(th) + _lik(t, j, th, pi_id, bg)
+    elif method == "auto" and not force_is:
+        g = g or torch.Generator(device=dev).manual_seed(12345 + j)
+        th, dg = smc_theta(t, j, pi_id, bg, k_is // 4, g)
+        return th, th.new_full((th.shape[0],), -math.log(th.shape[0])), dg["ess_min"]  # ESS: the smallest reweight's
     else:
         g = g or torch.Generator(device=dev).manual_seed(12345 + j)
         th = torch.randn(k_is, J, generator=g, device=dev)
@@ -359,6 +405,10 @@ def posterior_theta(t: HDTasks, j: int, pi_id: float, *, nb: int = 2048, k_is: i
                 break
     lw = lw - torch.logsumexp(lw, 0)
     return th, lw, float(torch.exp(-torch.logsumexp(2 * lw, 0)))
+
+
+def _uses_smc(t: HDTasks) -> bool:
+    return not (t.d == 1 and t.theta.shape[1] == 2 and not t.window)
 
 
 @torch.no_grad()
@@ -391,7 +441,13 @@ def oracle_draws(t: HDTasks, j: int, pi_id: float, M: int, g: torch.Generator, p
 def oracle_lp(t: HDTasks, j: int, pi_id: float, M: int = 16384, seed: int = 0, post=None) -> dict:
     """log predictive density of task j's queries [Q] (bucket scale), ESS, MC error (|half A − half B| mean over Q)."""
     g = torch.Generator(device=t.xa.device).manual_seed(seed + 7919 * j)
-    th, a, b, ess = oracle_draws(t, j, pi_id, M, g, post)
+    if post is None and _uses_smc(t):  # two independent SMC runs: the halves' difference is an honest MC error
+        p1, p2 = posterior_theta(t, j, pi_id, g=g), posterior_theta(t, j, pi_id, g=g)
+        d1, d2 = oracle_draws(t, j, pi_id, M // 2, g, p1), oracle_draws(t, j, pi_id, M - M // 2, g, p2)
+        th, a, b = (torch.cat([x, y]) for x, y in zip(d1[:3], d2[:3], strict=True))
+        ess = min(d1[3], d2[3])
+    else:
+        th, a, b, ess = oracle_draws(t, j, pi_id, M, g, post)
     mq = _m_of(t, j, th, t.xq[j])
     lp = R.bucket_lp(a[:, None] + b[:, None] * mq, t.sig_a[j], t.yq[j][None])  # [M, Q]
     half = M // 2

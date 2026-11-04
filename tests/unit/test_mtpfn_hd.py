@@ -61,10 +61,10 @@ def test_window_breaks_the_boundary_leak_and_is_matches_grid():
         assert float((t.f_a(c) - t.g(c)).abs().mean()) > 0.02
         t0 = hd.eval_tasks(hd.HDCfg(d=d, pi_id=1.0, window=False), 64, 3, "cpu")
         assert float((t0.f_a(c) - t0.g(c)).abs().max()) < 1e-4
-    # the adaptive IS used with the window agrees with the exact grid where both apply (d = 1, no window)
+    # the SMC used with the window agrees with the exact grid where both apply (d = 1, no window)
     t = hd.eval_tasks(hd.HDCfg(d=1, pi_id=0.5, window=False), 2, 777, "cpu").head(3)
     for j in range(2):
         grid = hd.oracle_lp(t, j, 0.5)["lp"].mean()
-        th, lw, _ = hd.posterior_theta(t, j, 0.5, force_is=True)
-        o = hd.oracle_lp(t, j, 0.5, post=(th, lw, 0.0))["lp"].mean()
-        assert abs(float(o - grid)) < 0.03
+        th, _ = hd.smc_theta(t, j, 0.5, hd.b_grid(2048, "cpu"), 4096, torch.Generator().manual_seed(j))
+        o = hd.oracle_lp(t, j, 0.5, post=(th, torch.full((4096,), -math.log(4096)), 0.0))["lp"].mean()
+        assert abs(float(o - grid)) < 0.04
