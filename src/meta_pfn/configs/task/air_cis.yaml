@@ -35,3 +35,9 @@ rounds: [1, 3]
 k_ref: 8192
 device: cuda
 threads: 4
+n_as: [1, 2, 3, 5, 8, 10]
+k_oracle: 2048
+oracle_chunk: 64
+cis_chunk: 32
+n_perm: 2
+exact_cis: true
