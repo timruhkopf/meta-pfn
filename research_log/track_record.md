@@ -175,3 +175,14 @@ with deliverables and open questions.
 - Correction: my statement (2026-11-03) that a different n_eval draws different tasks was wrong on CUDA (the 128-task
   runs were the first half of the same tasks); only the CPU-generated runs used different tasks.
 - Arm R: trainings 132558 / 132605 running (low priority); its reference not launched.
+
+### 2026-11-04 09:30 — MTPFN bounds notebook (issue #20, session 8ce7cc8e)
+- User request: a standalone notebook placing MTPFN between A-only (lower bound) and the oracle G-ref (upper bound), with
+  PPD heatmaps against n_A. Notebook 15 (`notebooks/15_2026-11-04_mtpfn_bounds.ipynb`, HTML in reports/figures/mtpfn_air/):
+  no new runs; reads the air_diag snapshots pilot_20261103-235449/-235620/-235751 and pilot 3's AIR q-IS rows
+  (results/mtpfn/air_examples/air_pilot3_paired.parquet, from air_rb/pilot_20261103-184131/-211850/-160447).
+- Heatmaps are computed live on CPU from seed-0 checkpoints on the first 64 CUDA-generated evaluation tasks per J,
+  exported once on ulysses (results/mtpfn/air_examples/eval_tasks_cuda_first64.pt, commit fb78024). Verified: live
+  per-task MTPFN and G-ref NLLs equal the ctrl table (max |Δ| = 0).
+- New numbers vs notebook 13: share of the A-only→oracle gap closed at J = 2, MTPFN 84 % → 46 %, AIR 90 % → 61 %
+  (n_A = 1 → 10); MTPFN worse than A-only on 4–11 % of tasks.
