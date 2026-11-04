@@ -1,0 +1,17 @@
+# @package _global_
+# Tiny run of the hd pipeline (notebook 16) for tests: d = 2 training on CPU.
+defaults:
+  - override /task: mtpfn
+
+name: mtpfn_hd_smoke
+task:
+  mode: hd_train
+  prior: hd
+  hd_d: 2
+  dm: 32
+  n_pairs: 1
+  d_ff: 64
+  steps: 3
+  batch: 4
+  every: 1
+  device: cpu

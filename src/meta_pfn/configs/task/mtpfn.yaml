@@ -1,8 +1,8 @@
 # MTPFN baseline (tasks/mtpfn.py; issue #20, notebook 12). Paper: Li, Daulton, Müller, Wilson, Bakshy,
 # "Robust Transfer for Bayesian Optimization with Prior-Data Fitted Networks" (SPIGM @ NeurIPS 2025).
 name: mtpfn
-mode: icm_train         # icm_train | icm_ref | icm_eval | air_train | air_eval | air_diag
-prior: icm              # icm (arm R) | air (arm A)
+mode: icm_train         # icm_train | icm_ref | icm_eval | air_train | air_eval | air_diag | hd_train | hd_eval
+prior: icm              # icm (arm R) | air (arm A) | hd (notebook 16: d > 1, latent h)
 # model (paper: 12 intra + 11 inter blocks, width 512, 4 heads)
 dm: 256
 heads: 4
@@ -43,5 +43,11 @@ eval_seed: 777
 aonly_ckpt: ""          # air_diag: pilot 3's clean A-only PFN (runs/air_rb/pilot_20261103-114539/<seed>)
 n_sens: 32              # air_diag: tasks per (J, n_A) for the sensitivity maps
 ckpts: ""               # icm_eval / air_eval: "name:path,..." (a name containing "gauss" loads the Gaussian head)
+# hd (notebook 16; experimental/mtpfn/hd.py): d in {1, 2}, h = id w.p. hd_pi_id else affine (H1), exact oracle
+hd_d: 1
+hd_j: 2                 # warp coefficients at d = 1 (d = 2 has 4)
+hd_pi_id: 0.5
+hd_aonly: false         # hd_train: the A-only bound (same architecture, A as the only task)
+hd_n_eval: 256          # hd_eval: tasks per d (CPU-drawn, eval_seed)
 device: cuda
 threads: 4

@@ -4,7 +4,11 @@
 - `icm_eval`: evaluate MTPFN checkpoints (task.ckpts = "name:path,...") on the same datasets; table `nll`;
 - `air_train`: train an MTPFN on the AIR prior (B = source, A = target); artifact model.pt; table `train`;
 - `air_eval`: evaluate it on pilot 3's evaluation tasks (task.ckpts = "mtpfn:path"); table `nll`;
-- `air_diag`: diagnostics on the same tasks (experimental/mtpfn/diagnose.py; notebook 13).
+- `air_diag`: diagnostics on the same tasks (experimental/mtpfn/diagnose.py; notebook 13);
+- `hd_train`: train on the generalised prior (experimental/mtpfn/hd.py; d = task.hd_d, latent h): the MTPFN, or with
+  task.hd_aonly the same architecture on A alone (the A-only bound); artifact model.pt; table `train`;
+- `hd_eval`: MTPFN, A-only and the exact oracle on fixed CPU-drawn tasks (task.ckpts = "mtpfn:path,aonly:path");
+  tables `nll`, `tasks` (notebook 16).
 """
 
 import time
@@ -21,13 +25,14 @@ from ..utils.seeding import seed_everything
 
 
 def _borders(t, device):
-    if t.prior == "air":  # AIR's bar support, so NLLs join pilot 3's
+    if t.prior in ("air", "hd"):  # AIR's bar support, so NLLs join pilot 3's
         return torch.linspace(AD.Y_LO, AD.Y_HI, AD.N_BINS + 1, device=device)
     return torch.linspace(t.y_lo, t.y_hi, t.n_bins + 1, device=device)
 
 
 def _model(t, device, head=None):
-    return MTPFN(t.d_max if t.prior == "icm" else 1, _borders(t, device), d_model=t.dm, heads=t.heads,
+    x_dim = t.d_max if t.prior == "icm" else (t.hd_d if t.prior == "hd" else 1)
+    return MTPFN(x_dim, _borders(t, device), d_model=t.dm, heads=t.heads,
                  n_pairs=t.n_pairs, d_ff=t.d_ff, head=head or t.head).to(device)  # fmt: skip
 
 
@@ -74,6 +79,29 @@ def mtpfn(cfg: DictConfig, run: Run) -> float:
         nll = Tr.icm_evaluate(models, t, dev, log=log)
         run.log_table("nll", nll)
         score = float(nll[nll.method == next(iter(models))].nll.mean())
+    elif t.mode == "hd_train":
+        from ..experimental.mtpfn import hd
+
+        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id)
+        m = _model(t, dev)
+        log(f"MTPFN parameters: {sum(p.numel() for p in m.parameters())} (d={t.hd_d}, aonly={t.hd_aonly})")
+        vt = hd.sample_tasks(hc, 256, hd.N_A_TRAIN[t.hd_d] // 2, torch.Generator().manual_seed(cfg.seed + 4242), dev)
+        val = hd.ao_batch(vt) if t.hd_aonly else hd.mt_batch(vt)
+        hist = Tr.train(m, hd.sampler(hc, t.hd_aonly), t.steps, dev, seed=cfg.seed, batch=t.batch, lr=t.lr,
+                        warmup=t.warmup, clip=t.clip, every=t.every, val=val, metrics=run.log_metrics,
+                        log=log)  # fmt: skip
+        run.log_table("train", hist)
+        torch.save(m.state_dict(), run.artifacts / "model.pt")
+        score = float(hist.val_nll.iloc[-1])
+    elif t.mode == "hd_eval":
+        from ..experimental.mtpfn import hd
+
+        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id)
+        models = _load(t, dev)
+        nll, tasks = hd.evaluate(models, hc, t.hd_n_eval, t.eval_seed, dev, log=log)
+        run.log_table("nll", nll)
+        run.log_table("tasks", tasks)
+        score = float(nll[(nll.method == "mtpfn") & (nll.n_a == 5)].nll.mean())
     elif t.mode == "air_diag":
         from ..experimental.mtpfn.diagnose import air_diagnose
 
