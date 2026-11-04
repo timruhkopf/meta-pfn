@@ -100,7 +100,7 @@ def smc(model: Model, K: int, g: torch.Generator, n_mh: int = 5, target: float =
         nonlocal th, L, sc
         X = th - th.mean(1, keepdim=True)
         cov = X.transpose(1, 2) @ X / (K - 1) + 1e-6 * torch.eye(D, device=dev)
-        ch = torch.linalg.cholesky(cov)
+        ch = FT.safe_chol(cov)
         for _ in range(nm):
             z = torch.randn(P, K, D, generator=g, device=dev)
             prop = th + (2.38 / math.sqrt(D)) * sc[:, None, None] * torch.einsum("pij,pkj->pki", ch, z)

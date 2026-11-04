@@ -104,6 +104,35 @@ def to_lat(psi: torch.Tensor, J: int, spec: Spec) -> torch.Tensor:
     return lat
 
 
+def safe_chol(A: torch.Tensor) -> torch.Tensor:
+    """Lower Cholesky factor of SPD matrices [B, D, D] with jitter (relative to the mean diagonal) added only on rows
+    that fail (ill-conditioned Laplace covariances in float32; log, Deviations R10). The proposal samples with and
+    evaluates its density under the returned factor, so the weights stay exact."""
+    A = 0.5 * (A + A.transpose(1, 2))
+    D = A.shape[-1]
+    if D == 0:
+        return A
+    eye = torch.eye(D, device=A.device, dtype=A.dtype)
+    scale = torch.diagonal(A, dim1=1, dim2=2).abs().mean(-1).clamp_min(1e-12)[:, None, None]
+    L, info = torch.linalg.cholesky_ex(A)
+    for eps in (1e-7, 1e-5, 1e-3, 1e-1):
+        bad = info != 0
+        if not bool(bad.any()):
+            break
+        L2, info2 = torch.linalg.cholesky_ex(A + eps * scale * eye)
+        L = torch.where(bad[:, None, None], L2, L)
+        info = torch.where(bad, info2, info)
+    bad = info != 0
+    if bool(bad.any()):  # last resort: the diagonal
+        L = torch.where(
+            bad[:, None, None], torch.diag_embed(torch.diagonal(A, dim1=1, dim2=2).clamp_min(1e-12).sqrt()), L
+        )
+    return torch.nan_to_num(L)
+
+
+GUARD: list = []  # (rows with the H fallback, rows) per fit call; diagnostics only
+
+
 def _prior_terms(D_t: int, aff: bool, device, dtype):
     lam = torch.eye(D_t + 2 * aff, device=device, dtype=dtype)
     m0 = torch.zeros(D_t + 2 * aff, device=device, dtype=dtype)
@@ -185,18 +214,29 @@ def fit(xa, ya, uc, tau, sig_c2, mu_fn, J: int, spec: Spec, aff: bool, iters: in
         psi = torch.where(ok[:, None], cand, psi)
         obj = torch.where(ok, oc, obj)
         lm = torch.where(ok, lm / 3, lm * 5)
+    psi = torch.where(torch.isfinite(psi).all(1, keepdim=True), psi, m0.expand_as(psi))
     e, s2, r = jac(psi)
     Fm = torch.einsum("bni,bn,bnj->bij", r, 1 / s2, r)
     H = lam + Fm
-    cov = torch.cholesky_inverse(torch.linalg.cholesky(H + 1e-9 * torch.eye(D, device=dev, dtype=dt)))
-    ct = torch.linalg.cholesky(cov[:, :D_t, :D_t] + 1e-10 * torch.eye(D_t, device=dev, dtype=dt))
+    # guard (log, Deviations R10): a non-finite Jacobian (flow clamp / saturated g) leaves H unusable on rare rows;
+    # those rows fall back to the prior precision (a wider proposal component: costs ESS, never validity)
+    eyeD = torch.eye(D, device=dev, dtype=dt)
+    Lh, info = torch.linalg.cholesky_ex(H + 1e-9 * eyeD)
+    bad = (info != 0) | ~torch.isfinite(H).flatten(1).all(1)
+    GUARD.append((int(bad.sum()), B))
+    if bool(bad.any()):
+        H = torch.where(bad[:, None, None], lam.expand_as(H), H)
+        Lh = torch.linalg.cholesky(H + 1e-9 * eyeD)
+    cov = torch.cholesky_inverse(Lh)
+    ct = safe_chol(cov[:, :D_t, :D_t])
     d = psi - m0
     ld_h = torch.logdet(H)
     ld_l = torch.logdet(lam)
     lz = ((-0.5 * e**2 / s2 - 0.5 * torch.log(2 * math.pi * s2)).sum(1) - 0.5 * torch.einsum("bi,ij,bj->b", d, lam, d)
           - 0.5 * (ld_h - ld_l))  # fmt: skip
     if n_lis:  # fallback for test 4 (log, Deviations): importance-corrected Laplace evidence
-        lz = _lis(psi.detach(), torch.linalg.cholesky(cov), logjoint, n_lis, g)
+        lz = _lis(psi.detach(), safe_chol(cov), logjoint, n_lis, g)
+    lz = torch.nan_to_num(lz, nan=-1e30, posinf=-1e30)  # a component with no usable evidence gets no proposal mass
     return Fit(psi.detach(), psi[:, :D_t].detach(), ct.detach(), lz.detach(), _h(psi.detach(), D_t, aff))
 
 
