@@ -7,6 +7,9 @@ Prior (one task = a dense source B and a scarce target A), x ∈ [0, 1]^d, d ∈
   d = 1: AIR's velocity x(1 − x) Σ_j θ_j cos((j − 1)πx) s_T / j with J coefficients (air.prior.flow, s_t_for);
   d = 2: v_1 = x_1(1 − x_1) s (θ_1 + θ_2 cos(π x_2) / 2), v_2 = x_2(1 − x_2) s (θ_3 + θ_4 cos(π x_1) / 2); 4
   coefficients, the second of each couples the coordinates; s calibrated so that E|T(x) − x| ≈ 0.13 per coordinate;
+  with `window` (default) T(x) = c + w φ_θ(x) per coordinate, w ~ U[0.5, 1], c ~ U[0, 1 − w] (as Gaussian latents
+  through Φ): A's box maps into a random sub-box of B's. Without it φ_θ fixes the faces (the corners at d = 2, both
+  ends at d = 1), so with h = id B gives A's values there exactly (the boundary leak; notebooks 15-16);
 - h latent: identity with probability pi_id, otherwise affine (H1 of the AIR spec) a + b v, b ~ U[0.3, 1],
   a ~ U[0, 1 − b];
 - y_b = g(x_b) + ε_b, y_a = h(g(T(x_a))) + ε_a, σ_A, σ_B ~ U[0.005, 0.03]; always related (Z0); designs uniform.
@@ -14,9 +17,10 @@ Prior (one task = a dense source B and a scarce target A), x ∈ [0, 1]^d, d ∈
 Oracle: the exact posterior predictive given the true g, σ_A and the prior (g known exactly: the dense-B limit, a
 bound for models that see 128 noisy B points). h is integrated analytically: for fixed (θ, b) the likelihood is
 Gaussian in a, integrated in closed form over a ∈ [0, 1 − b] (normal CDFs); b on a fine midpoint grid; the
-id/affine mixture exactly. θ: a 101² grid at d = 1, J = 2; adaptive importance sampling (prior, then defensive KDE
-stages) at d = 2, with the ESS reported. The predictive is a mixture over M posterior draws of (θ, h) of
-N(h(g(T_θ(x*))), σ_A²) integrated over the bar buckets; its MC error is reported (two independent halves).
+id/affine mixture exactly. θ: a 101² grid at d = 1, J = 2 without the window; otherwise adaptive importance
+sampling (prior, then defensive KDE stages), with the ESS reported. The predictive is a mixture over M posterior
+draws of (θ, h) of N(h(g(T_θ(x*))), σ_A²) integrated over the bar buckets; its MC error is reported
+(two independent halves).
 """
 
 import functools
@@ -33,6 +37,7 @@ WIDTH = 32
 B_LO = 0.3
 T_MEAN_SHIFT = 0.13
 RK_STEPS = 24
+W_LO = 0.5  # the window's smallest width per coordinate
 
 
 @dataclass
@@ -44,6 +49,7 @@ class HDCfg:
     n_q: int = 32
     sig_lo: float = 0.005
     sig_hi: float = 0.03
+    window: bool = True  # False: the box-preserving warp of the first notebook-16 runs (leaks the boundary values)
 
 
 @dataclass
@@ -127,16 +133,22 @@ def s_t2(target: float = T_MEAN_SHIFT, n: int = 4000) -> float:
 
 
 def n_theta(cfg: HDCfg) -> int:
-    return cfg.J if cfg.d == 1 else 4
+    return (cfg.J if cfg.d == 1 else 4) + (2 * cfg.d if cfg.window else 0)
 
 
 def s_t(cfg: HDCfg) -> float:
     return s_t_for(cfg.J) if cfg.d == 1 else s_t2()
 
 
-def warp(x: torch.Tensor, th: torch.Tensor, d: int, s: float) -> torch.Tensor:
-    """x [P, M, d], th [P, J] -> T_θ(x) [P, M, d]."""
-    return flow1(x[..., 0], th, s)[..., None] if d == 1 else flow2(x, th, s)
+def warp(x: torch.Tensor, th: torch.Tensor, d: int, s: float, window: bool = False) -> torch.Tensor:
+    """x [P, M, d], th [P, J] -> T_θ(x) [P, M, d]; with window the last 2d entries of θ are (z_w, z_c) ~ N(0, I)."""
+    k = th.shape[-1] - (2 * d if window else 0)
+    u = flow1(x[..., 0], th[..., :k], s)[..., None] if d == 1 else flow2(x, th[..., :k], s)
+    if not window:
+        return u
+    w = W_LO + (1 - W_LO) * torch.special.ndtr(th[..., k : k + d])
+    c = (1 - w) * torch.special.ndtr(th[..., k + d :])
+    return c[..., None, :] + w[..., None, :] * u
 
 
 # ---- tasks -----------------------------------------------------------------------------------------------------------
@@ -157,6 +169,7 @@ class HDTasks:
     g: Funcs
     d: int
     s: float
+    window: bool = False
 
     def _map(self, f, g_idx=None) -> "HDTasks":
         kw = {k.name: getattr(self, k.name) for k in fields(self)}
@@ -177,7 +190,7 @@ class HDTasks:
 
     def f_a(self, x: torch.Tensor) -> torch.Tensor:
         """The true noise-free f_A at x [P, M, d]."""
-        v = self.g(warp(x, self.theta, self.d, self.s))
+        v = self.g(warp(x, self.theta, self.d, self.s, self.window))
         return self.hp[:, :1] + self.hp[:, 1:] * v
 
 
@@ -196,9 +209,9 @@ def sample_tasks(cfg: HDCfg, P: int, n_a: int, g: torch.Generator, device=None) 
     sig_b = cfg.sig_lo + (cfg.sig_hi - cfg.sig_lo) * r(P)
     xb, xa, xq = r(P, cfg.n_b, d), r(P, n_a, d), r(P, cfg.n_q, d)
     yb = f(xb) + sig_b[:, None] * torch.randn(P, cfg.n_b, generator=g, device=gd)
-    v = f(warp(torch.cat([xa, xq], 1), theta, d, s))
+    v = f(warp(torch.cat([xa, xq], 1), theta, d, s, cfg.window))
     y = hp[:, :1] + hp[:, 1:] * v + sig_a[:, None] * torch.randn(P, n_a + cfg.n_q, generator=g, device=gd)
-    t = HDTasks(xb, yb, xa, y[:, :n_a], xq, y[:, n_a:], sig_a, theta, hid, hp, f, d, s)
+    t = HDTasks(xb, yb, xa, y[:, :n_a], xq, y[:, n_a:], sig_a, theta, hid, hp, f, d, s, cfg.window)
     return t if device is None else t.to(device)
 
 
@@ -293,7 +306,7 @@ def log_marg(L_id: torch.Tensor, lb: torch.Tensor, pi_id: float) -> torch.Tensor
 def _m_of(t: HDTasks, j: int, th: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
     """g_j(T_θ(x)) for θ [K, J], x [M, d] -> [K, M]."""
     K = th.shape[0]
-    u = warp(x[None].expand(K, -1, -1), th, t.d, t.s)
+    u = warp(x[None].expand(K, -1, -1), th, t.d, t.s, t.window)
     return t.g.at(torch.full((K,), j, device=th.device, dtype=torch.long))(u)
 
 
@@ -312,12 +325,13 @@ def _log_n01(th: torch.Tensor) -> torch.Tensor:
 
 @torch.no_grad()
 def posterior_theta(t: HDTasks, j: int, pi_id: float, *, nb: int = 2048, k_is: int = 16384, stages: int = 4,
-                    g: torch.Generator | None = None) -> tuple[torch.Tensor, torch.Tensor, float]:  # fmt: skip
+                    g: torch.Generator | None = None,
+                    force_is: bool = False) -> tuple[torch.Tensor, torch.Tensor, float]:  # fmt: skip
     """-> (θ particles [K, J], normalized log weights [K], ESS). d = 1: the 101² grid (J = 2); d = 2: adaptive IS."""
     dev = t.xa.device
     bg = b_grid(nb, dev)
     J = t.theta.shape[1]
-    if t.d == 1 and J == 2:
+    if t.d == 1 and J == 2 and not t.window and not force_is:
         th = R.grid(101, device=str(dev))
         lw = _log_n01(th) + _lik(t, j, th, pi_id, bg)
     else:
@@ -374,10 +388,10 @@ def oracle_draws(t: HDTasks, j: int, pi_id: float, M: int, g: torch.Generator, p
 
 
 @torch.no_grad()
-def oracle_lp(t: HDTasks, j: int, pi_id: float, M: int = 16384, seed: int = 0) -> dict:
+def oracle_lp(t: HDTasks, j: int, pi_id: float, M: int = 16384, seed: int = 0, post=None) -> dict:
     """log predictive density of task j's queries [Q] (bucket scale), ESS, MC error (|half A − half B| mean over Q)."""
     g = torch.Generator(device=t.xa.device).manual_seed(seed + 7919 * j)
-    th, a, b, ess = oracle_draws(t, j, pi_id, M, g)
+    th, a, b, ess = oracle_draws(t, j, pi_id, M, g, post)
     mq = _m_of(t, j, th, t.xq[j])
     lp = R.bucket_lp(a[:, None] + b[:, None] * mq, t.sig_a[j], t.yq[j][None])  # [M, Q]
     half = M // 2
@@ -408,7 +422,7 @@ def evaluate(models: dict, cfg: HDCfg, n_tasks: int, seed: int, device, log=prin
     from .train import nll_per_task
 
     base = eval_tasks(cfg, n_tasks, seed, device)
-    shift = (warp(base.xq, base.theta, cfg.d, base.s) - base.xq).abs().mean((1, 2))
+    shift = (warp(base.xq, base.theta, cfg.d, base.s, cfg.window) - base.xq).abs().mean((1, 2))
     task_rows = [{"d": cfg.d, "task": i, "h_id": bool(base.hid[i]), "a": float(base.hp[i, 0]),
                   "b": float(base.hp[i, 1]), "sig_a": float(base.sig_a[i]), "shift": float(shift[i])}
                  for i in range(n_tasks)]  # fmt: skip

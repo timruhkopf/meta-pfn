@@ -47,6 +47,7 @@ ckpts: ""               # icm_eval / air_eval: "name:path,..." (a name containin
 hd_d: 1
 hd_j: 2                 # warp coefficients at d = 1 (d = 2 has 4)
 hd_pi_id: 0.5
+hd_window: true         # T = window ∘ φ_θ (no boundary leak); false = the first, box-preserving runs (leak)
 hd_aonly: false         # hd_train: the A-only bound (same architecture, A as the only task)
 hd_n_eval: 256          # hd_eval: tasks per d (CPU-drawn, eval_seed)
 device: cuda

@@ -83,7 +83,7 @@ def mtpfn(cfg: DictConfig, run: Run) -> float:
     elif t.mode == "hd_train":
         from ..experimental.mtpfn import hd
 
-        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id)
+        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id, window=t.hd_window)
         m = _model(t, dev)
         log(f"MTPFN parameters: {sum(p.numel() for p in m.parameters())} (d={t.hd_d}, aonly={t.hd_aonly})")
         vt = hd.sample_tasks(hc, 256, hd.N_A_TRAIN[t.hd_d] // 2, torch.Generator().manual_seed(cfg.seed + 4242), dev)
@@ -97,7 +97,7 @@ def mtpfn(cfg: DictConfig, run: Run) -> float:
     elif t.mode == "hd_eval":
         from ..experimental.mtpfn import hd
 
-        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id)
+        hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id, window=t.hd_window)
         models = _load(t, dev)  # "mtpfn:path"; the A-only bound from task.aonly_ckpt (no comma: not a sweep axis)
         ao = _model(t, dev)
         ao.load_state_dict(torch.load(t.aonly_ckpt, map_location=dev))
