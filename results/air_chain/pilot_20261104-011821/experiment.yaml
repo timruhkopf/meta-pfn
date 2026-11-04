@@ -1,0 +1,14 @@
+# @package _global_
+# AIR proposal v2 (issue #21, notebook 14): explicit correspondence chain + Laplace mixture (variant (c)) vs pilot 3's
+# pooled-encoder flow proposal (variant (a)), at equal K, on pilot 3's evaluation tasks with pilot 3's decoder.
+# Spec: docs/a2b_air_proposal_v2_2026-11-03.md. Run: seed=0,1,2 with task.decoder_ckpt=<pilot-3 decoder of that seed>
+# task.proposal_ckpts=2:<proposal J=2>,16:<proposal J=16> (pilot-3 checkpoints of the same seed).
+defaults:
+  - override /task: air
+
+name: air_chain
+task:
+  mode: chain_eval
+  g_norm: ecdf
+  n_eval: 256
+  chain_m: 128

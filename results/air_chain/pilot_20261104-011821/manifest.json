@@ -1,0 +1,32 @@
+{
+ "id": "pilot_20261104-011821",
+ "experiment": "air_chain",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep local pilot experiment=air_chain seed=2 task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-101808/2/tracking/artifacts/model.pt task.proposal_ckpts=2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-120248/2/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-134243/2/tracking/artifacts/model.pt",
+ "overrides": [
+  "experiment=air_chain",
+  "seed=2",
+  "task.decoder_ckpt=/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-101808/2/tracking/artifacts/model.pt",
+  "task.proposal_ckpts=2:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-120248/2/tracking/artifacts/model.pt,16:/home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-134243/2/tracking/artifacts/model.pt"
+ ],
+ "backend": "local",
+ "commit": "7a57029f2fc62b1fce9bccd48e1769dc996695fb",
+ "branch": "exp/21-air-chain",
+ "tag": "sweep/air_chain/pilot_20261104-011821",
+ "allow_dirty": false,
+ "host": "ulysses",
+ "created": "2026-11-04T01:18:21",
+ "editable_dependencies": {
+  "meta-pfn": "f41c8c59d0ac34762c5c54ef31d96582cc8cf7f6"
+ },
+ "status_counts": {
+  "DONE": 2
+ },
+ "first_start": "2026-11-04T01:18:23",
+ "last_end": "2026-11-04T01:51:40",
+ "wall_h": 0.554,
+ "device_h": 0.0,
+ "snapshot_created": "2026-11-04T01:51:51",
+ "sweep_dir": "runs/air_chain/pilot_20261104-011821"
+}

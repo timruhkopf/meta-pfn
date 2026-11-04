@@ -166,3 +166,16 @@ with deliverables and open questions.
 - 2026-11-03 09:55: BUG (mine): tasks/air.py did not pass task.g_norm to train_proposal, so pilot-2 proposal sweep pilot_20261103-090502 trained under min-max (J = 2, 4 bit-identical to pilot 1). Killed (queue 1518248, member 1519169); sweep invalid, never to be snapshotted or decided. Decoder sweep pilot_20261103-090459 is valid (A-only val NLL -1.835 vs -1.455 in pilot 1). Fixed, regression test added, proposals relaunched.
 - 2026-11-03 10:20: pilot 3 (experiment air_rb, notebook 11) pre-registered at 7b8bfd2 after the user review: Σ ∈ {0, 0.1, 0.3, 1} (Σ = ∞ dropped), clean A-only PFN baseline (user decisions), Σ-conditioned decoder and proposals, plateau training, proposal clip 20, QMC, 3 seeds, ECDF prior. Launched decoder_rb pilot_20261103-101808 (seeds 0-2). Hourly cron drives the rest.
 - 2026-11-03 12:20: pilot 2 done (eval pilot_20261103-104807): fails as registered (V0 artefact, V1.2, V1.3, V2, V3 coverage/KL, V4 2 of 3); V5 passes; edge leak removed. Notebook 10 §Pilot 2, log §2. Also fixed a bug in my notebook-10 criteria function (V1.2/V1.3 read the pilot-1 table; harmless for the 60k rows, which share that decoder).
+
+### 2026-11-04 02:20 — AIR proposal v2 pilot finished (issue #21, branch exp/21-air-chain, session 8ce7cc8e)
+- Mandate (user, 2026-11-03): implement Tim's proposal v2 (docs/a2b_air_proposal_v2_2026-11-03.md, incl. the refinement:
+  GN builds q, forward–backward in 1-D, C_a from B widened by σ_A) and run it overnight after MTPFN; log the idea.
+- Implemented experimental/air/chain.py + mode `chain_eval` (45a865a … 7a57029); notebook 14 pre-registered before the
+  first run; V2.0 reference amended to isref before the first run (logged in §0).
+- Bug (mine): the ulysses waiter did not start after MTPFN (wrong sweep-id pattern, non-tty `ps` truncation); fixed,
+  seed 0 started 00:12. Sweeps `results/air_chain/pilot_20261104-001215` / `-004520` / `-011821` (seeds 0-2), 6/6 DONE.
+- Verified: flow rows reproduce pilot 3's qis at Σ = 0 on the same tasks (K = 128 within 0.002).
+- Result: V2.0 pass, V2.1 fail (Δ in [−0.015, +0.020] at K = 32), V2.2 fail, rule INCONCLUSIVE (NO-GO missed by one
+  cell at 0.020). V2.1's 0.05 exceeded the available K = 32 → isref headroom (0.012–0.048): pre-registration flaw.
+  Proposed: INCONCLUSIVE, in substance NO-GO for d = 1; not decided. Notebook 14, log §1,
+  reports/figures/air_chain/.

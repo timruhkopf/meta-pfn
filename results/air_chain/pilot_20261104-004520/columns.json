@@ -1,0 +1,1 @@
+{"params": ["task.proposal_ckpts"], "metrics": ["final/score", "time/total_s"]}

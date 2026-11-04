@@ -1,0 +1,30 @@
+name: air_chain
+seed: 1
+task.J: 2
+task.aonly_ckpt: ''
+task.batch: 64
+task.chain_m: 128
+task.clip_d: 1.0
+task.clip_q: 20.0
+task.decoder_ckpt: /home/ruhkopf/PycharmProjects/meta-pfn/runs/air_rb/pilot_20261103-101808/1/tracking/artifacts/model.pt
+task.device: cuda
+task.diag_ks: '[32, 128, 512, 2048]'
+task.dm: 128
+task.eval_seed: 777
+task.every: 250
+task.fid_tasks: 32
+task.g_norm: ecdf
+task.h_kind: id
+task.j_mix: '[2, 4, 8, 16]'
+task.k_exact: 10000
+task.k_ref: 4096
+task.ks: '[8, 32, 128]'
+task.layers: 6
+task.lr: 0.0003
+task.max_steps: 100000
+task.mode: chain_eval
+task.n_eval: 256
+task.name: air
+task.sig_list: '[0.0, 0.1, 0.3, 1.0]'
+task.steps: 20000
+task.threads: 4
