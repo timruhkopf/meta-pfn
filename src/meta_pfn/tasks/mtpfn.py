@@ -7,7 +7,8 @@
 - `air_diag`: diagnostics on the same tasks (experimental/mtpfn/diagnose.py; notebook 13);
 - `hd_train`: train on the generalised prior (experimental/mtpfn/hd.py; d = task.hd_d, latent h): the MTPFN, or with
   task.hd_aonly the same architecture on A alone (the A-only bound); artifact model.pt; table `train`;
-- `hd_eval`: MTPFN, A-only and the exact oracle on fixed CPU-drawn tasks (task.ckpts = "mtpfn:path,aonly:path");
+- `hd_eval`: MTPFN, A-only and the exact oracle on fixed CPU-drawn tasks (task.ckpts = "mtpfn:path",
+  task.aonly_ckpt = the A-only model.pt);
   tables `nll`, `tasks` (notebook 16).
 """
 
@@ -97,7 +98,10 @@ def mtpfn(cfg: DictConfig, run: Run) -> float:
         from ..experimental.mtpfn import hd
 
         hc = hd.HDCfg(d=t.hd_d, J=t.hd_j, pi_id=t.hd_pi_id)
-        models = _load(t, dev)
+        models = _load(t, dev)  # "mtpfn:path"; the A-only bound from task.aonly_ckpt (no comma: not a sweep axis)
+        ao = _model(t, dev)
+        ao.load_state_dict(torch.load(t.aonly_ckpt, map_location=dev))
+        models["aonly"] = ao
         nll, tasks = hd.evaluate(models, hc, t.hd_n_eval, t.eval_seed, dev, log=log)
         run.log_table("nll", nll)
         run.log_table("tasks", tasks)
