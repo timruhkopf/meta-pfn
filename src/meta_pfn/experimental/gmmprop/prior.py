@@ -59,9 +59,16 @@ def se_kernel(a: torch.Tensor, b: torch.Tensor, ell: torch.Tensor) -> torch.Tens
     return ALPHA**2 * torch.exp(-0.5 * d2 / ell[..., None, None] ** 2)
 
 
-@torch.no_grad()
 def sample(B: int, n: int, d: int, Q: int, g: torch.Generator, device="cpu") -> Batch:
     """B tasks with n context tokens and Q queries; all random numbers from g (on `device`)."""
+    return sample_fields(B, n, d, Q, g, device)[0]
+
+
+@torch.no_grad()
+def sample_fields(B: int, n: int, d: int, Q: int, g: torch.Generator, device="cpu",
+                  xq_fixed: torch.Tensor | None = None) -> tuple[Batch, torch.Tensor]:  # fmt: skip
+    """As `sample`, and the hypotheses' values at the queries u_q [B, Q, M_MAX, d] (for figures). xq_fixed [Q, d]
+    replaces the random query locations (the same for every task)."""
     f64: dict[str, Any] = dict(dtype=torch.float64, device=device)
     pm = torch.tensor(P_M, **f64)
     m = torch.multinomial(pm.expand(B, -1), 1, generator=g)[:, 0] + 1  # [B] in 1..M_MAX
@@ -72,7 +79,7 @@ def sample(B: int, n: int, d: int, Q: int, g: torch.Generator, device="cpu") -> 
     ell = ells(d).to(device)[torch.randint(len(ELL0), (B,), generator=g, device=device)]
 
     x = torch.rand(B, n, d, generator=g, **f64)
-    xq = torch.rand(B, Q, d, generator=g, **f64)
+    xq = torch.rand(B, Q, d, generator=g, **f64) if xq_fixed is None else xq_fixed.to(**f64)[None].expand(B, -1, -1)
     pts = torch.cat([x, xq], 1)  # [B, n+Q, d]
     K = se_kernel(pts, pts, ell) + JIT * ALPHA**2 * torch.eye(n + Q, **f64)
     L = torch.linalg.cholesky(K)
@@ -94,5 +101,6 @@ def sample(B: int, n: int, d: int, Q: int, g: torch.Generator, device="cpu") -> 
     yq = torch.gather(u_q, 2, mstar[..., None, None].expand(-1, -1, 1, d))[:, :, 0]
 
     f32 = lambda t: t.float()  # noqa: E731
-    return Batch(x=f32(x), w=f32(w), mu=f32(mu), s=f32(s), cmask=cmask, xq=f32(xq), yq=f32(yq), mu_lab=f32(mu_lab),
-                 w_lab=f32(w_lab), m=m, ell=f32(ell), mstar=mstar)  # fmt: skip
+    b = Batch(x=f32(x), w=f32(w), mu=f32(mu), s=f32(s), cmask=cmask, xq=f32(xq), yq=f32(yq), mu_lab=f32(mu_lab),
+              w_lab=f32(w_lab), m=m, ell=f32(ell), mstar=mstar)  # fmt: skip
+    return b, f32(u_q)

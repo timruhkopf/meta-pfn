@@ -202,3 +202,13 @@ with deliverables and open questions.
   - Hypotheses: C1 fails on the ≥ 3-extrema stratum only; C3 and C6 pass; C4 and C5 fail.
   - The leak flag is explained by post-hoc controls (prior-level and matched-query).
 - **Open:** C8 (the no-T′ decoder is trained but not evaluated); seeds 1–2; `decide` is the user's.
+
+### 2026-11-05 16:05 — GMM-token propagation pilot (issue #23, session 8ce7cc8e)
+- **Mandate** (user, 2026-11-05): a tiny experiment on the user's GMM-token PFN idea (propagate a known, possibly
+  multimodal d-dim displacement GMM from A's tokens to any query), across d and context size; report in a notebook.
+- **Code** at 1263853 (prior, closed-form oracle, model, pipeline, 5 tests); deviation D1 logged at b372e9d before any
+  other member was looked at.
+- **Runs:** `pilot_20261105-145454` (registered) and `pilot_20261105-150054` (D1), 4/4 DONE each, snapshotted;
+  notebook 18 + HTML (reports/figures/gmm_prop/).
+- **Result:** proposed NO-GO (d = 2: Δ / d 0.06 at n = 2, 0.14 at n = 4); near-Bayes for n ≤ 2, gap grows with n,
+  mostly on M ≥ 2 tasks; D1 halves the d ≤ 2 gaps. `decide` is the user's.

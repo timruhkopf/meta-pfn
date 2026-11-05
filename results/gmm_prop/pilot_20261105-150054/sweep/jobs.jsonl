@@ -1,0 +1,4 @@
+{"member": 0, "overrides": ["experiment=gmm_prop", "task.d=1", "seed=0", "task.clip=20", "task.steps=60000"]}
+{"member": 1, "overrides": ["experiment=gmm_prop", "task.d=2", "seed=0", "task.clip=20", "task.steps=60000"]}
+{"member": 2, "overrides": ["experiment=gmm_prop", "task.d=4", "seed=0", "task.clip=20", "task.steps=60000"]}
+{"member": 3, "overrides": ["experiment=gmm_prop", "task.d=8", "seed=0", "task.clip=20", "task.steps=60000"]}

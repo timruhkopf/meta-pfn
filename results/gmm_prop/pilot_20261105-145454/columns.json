@@ -1,0 +1,1 @@
+{"params": ["task.d"], "metrics": ["final/gmm_prop_gap/n0", "final/gmm_prop_gap/n1", "final/gmm_prop_gap/n128", "final/gmm_prop_gap/n16", "final/gmm_prop_gap/n2", "final/gmm_prop_gap/n32", "final/gmm_prop_gap/n4", "final/gmm_prop_gap/n64", "final/gmm_prop_gap/n8", "final/gmm_prop_score", "time/total_s"]}
