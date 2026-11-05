@@ -186,3 +186,19 @@ with deliverables and open questions.
   per-task MTPFN and G-ref NLLs equal the ctrl table (max |Δ| = 0).
 - New numbers vs notebook 13: share of the A-only→oracle gap closed at J = 2, MTPFN 84 % → 46 %, AIR 90 % → 61 %
   (n_A = 1 → 10); MTPFN worse than A-only on 4–11 % of tasks.
+
+### 2026-11-05 08:00 — AIR-CIS pilot finished (issue #22, session 8ce7cc8e)
+- **Mandate** (user, 2026-11-04): implement the AIR-CIS design on a branch, log it, compare against MTPFN with no
+  prior leakage, report it in a standalone notebook with the A-only and oracle baselines.
+- **Code:**
+  - prior / CIS-U / oracle / evaluation at 3298d0c → 6441ff0 → 878fa26 → edd69cd;
+  - tests 1–8 and the prior tests pass;
+  - deviations R1–R10 in the log (R10 found by a CPU smoke run before any sweep).
+- **Runs:** decoder, MTPFN, A-only, the no-T′ decoder and the evaluation (pilot_20261104-174531 / -175731 / -183902 /
+  -201833 / -202203), all DONE, snapshotted. Notebook 17 and its HTML are in reports/figures/air_cis/.
+- **Result:** CIS-U (R = 3, K = 128) beats MTPFN by 0.030–0.045 nats at every n_A (CIs exclude 0), below the 0.05
+  margin → proposed INCONCLUSIVE.
+  - Remaining error: decoder 0.08–0.10, proposal ≤ 0.017.
+  - Hypotheses: C1 fails on the ≥ 3-extrema stratum only; C3 and C6 pass; C4 and C5 fail.
+  - The leak flag is explained by post-hoc controls (prior-level and matched-query).
+- **Open:** C8 (the no-T′ decoder is trained but not evaluated); seeds 1–2; `decide` is the user's.

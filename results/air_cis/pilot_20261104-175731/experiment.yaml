@@ -1,0 +1,7 @@
+# @package _global_
+# AIR-CIS (issue #22, notebook 17): correspondence importance sampling vs MTPFN, A-only and the exact oracle on a
+# leak-free prior. See configs/task/air_cis.yaml.
+defaults:
+  - override /task: air_cis
+
+name: air_cis

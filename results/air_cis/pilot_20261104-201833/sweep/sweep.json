@@ -1,0 +1,25 @@
+{
+ "id": "pilot_20261104-201833",
+ "experiment": "air_cis",
+ "stage": "pilot",
+ "kind": "grid",
+ "command": "just sweep local pilot experiment=air_cis task.mode=dec_train task.tfeat=false seed=0",
+ "overrides": [
+  "experiment=air_cis",
+  "task.mode=dec_train",
+  "task.tfeat=false",
+  "seed=0"
+ ],
+ "backend": "local",
+ "commit": "edd69cdc2e85f71a03935161e34bfddddd1ef513",
+ "branch": "exp/22-air-cis",
+ "tag": "sweep/air_cis/pilot_20261104-201833",
+ "allow_dirty": false,
+ "dirty_paths": [],
+ "editable_dependencies": {
+  "meta-pfn": "f41c8c59d0ac34762c5c54ef31d96582cc8cf7f6"
+ },
+ "host": "ulysses",
+ "created": "2026-11-04T20:18:33",
+ "n_members": 1
+}

@@ -26,3 +26,6 @@ __pycache__/
 dist/
 build/
 .idea/
+
+# AIR-CIS per-query table (6 MB, over the 2 MB hook limit): regenerate with the snapshot command from runs/air_cis/pilot_20261104-202203
+results/air_cis/pilot_20261104-202203/tables/query.parquet

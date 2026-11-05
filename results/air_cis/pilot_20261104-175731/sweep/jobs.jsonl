@@ -1,0 +1,1 @@
+{"member": 0, "overrides": ["experiment=air_cis", "task.mode=mt_train", "task.aonly=false", "seed=0"]}
