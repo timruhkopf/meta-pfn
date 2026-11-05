@@ -28,3 +28,5 @@ A2B_NLL_N5 = "final/nll_n5"  # a2b: model mixture NLL on A queries, warp stratum
 MTPFN_SCORE = "final/mtpfn_score"  # mtpfn: train val NLL | icm_eval mean NLL (1st model) | air_eval NLL (J min, n_A=5)
 AIR_CIS_SCORE = "final/air_cis_score"  # air_cis: train val NLL | eval: CIS-U (R = 3, K = 128) NLL at n_A = 3
 AIR_SCORE = "final/score"  # air: decoder val NLL (teacher, n_A=5) | proposal val NLL | eval q-IS32 NLL (J min, n_A=5)
+GMM_PROP_SCORE = "final/gmm_prop_score"  # gmm_prop: max over n of (NLL_model - NLL_oracle) / d on the evaluation tasks
+GMM_PROP_GAP = "final/gmm_prop_gap"  # + "/n<n>": (NLL_model - NLL_oracle) / d at n context tokens

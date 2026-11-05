@@ -1,0 +1,6 @@
+# @package _global_
+# GMM-token PFN: propagating a known d-dim displacement GMM (issue #23, notebook 18). Sweep axis task.d.
+defaults:
+  - override /task: gmm_prop
+
+name: gmm_prop

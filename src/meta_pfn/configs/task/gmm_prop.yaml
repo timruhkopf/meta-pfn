@@ -1,0 +1,23 @@
+# GMM-token propagation (tasks/gmm_prop.py; issue #23, notebook 18). Prior: experimental/gmmprop/prior.py.
+name: gmm_prop
+d: 2                    # output = input dimension of the displacement; the sweep axis
+# model
+dm: 128
+layers: 4
+heads: 4
+dff: 256
+k_out: 10               # Gaussians in the output mixture
+# training
+steps: 30000
+batch: 64
+q: 64                   # queries per task
+n_max: 128              # n ~ U{0..n_max} per batch
+lr: 3e-4
+warmup: 1000
+clip: 1.0
+every: 500
+# evaluation
+n_eval: 256
+eval_seed: 2311
+device: cuda
+threads: 4

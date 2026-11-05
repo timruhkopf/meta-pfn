@@ -9,6 +9,7 @@ from .a2b import a2b
 from .air import air
 from .air_cis import air_cis
 from .fieldonly import fieldonly
+from .gmm_prop import gmm_prop
 from .gwonly import gwonly
 from .headroom import headroom
 from .ladder import ladder
@@ -26,6 +27,7 @@ TASKS: dict[str, Pipeline] = {
     "air": air,
     "air_cis": air_cis,
     "fieldonly": fieldonly,
+    "gmm_prop": gmm_prop,
     "gwonly": gwonly,
     "headroom": headroom,
     "ladder": ladder,

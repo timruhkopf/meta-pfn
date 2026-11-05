@@ -1,0 +1,15 @@
+# @package _global_
+# Tiny GMM-token PFN run, for tests and the sanity stage.
+defaults:
+  - override /task: gmm_prop
+
+name: gmm_prop_smoke
+task:
+  dm: 32
+  layers: 1
+  steps: 3
+  batch: 4
+  q: 8
+  every: 1
+  n_eval: 4
+  device: cpu
