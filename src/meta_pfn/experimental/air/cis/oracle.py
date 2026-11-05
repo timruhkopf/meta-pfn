@@ -136,9 +136,10 @@ def smc(model: Model, K: int, g: torch.Generator, n_mh: int = 5, target: float =
 
 
 @torch.no_grad()
-def predictive(model: Model, th: torch.Tensor, g: torch.Generator):
+def predictive(model: Model, th: torch.Tensor, g: torch.Generator, probs: bool = False):
     """Equal-weight particles -> per particle (log bucket density at y* [P, K, Q], CDF at y* [P, K, Q]) with one
-    posterior h draw each (exact mixture over particles)."""
+    posterior h draw each (exact mixture over particles); with probs, also the mixture's bucket probabilities
+    [P, Q, G]."""
     t = model.t
     m_q = model.m(th, t.xq)
     P, K = th.shape[:2]
@@ -166,6 +167,8 @@ def predictive(model: Model, th: torch.Tensor, g: torch.Generator):
     sig = t.sig_a[:, None, None]
     lp = bucket_lp(mu, sig, t.yq[:, None])
     cdf = 0.5 * (1 + torch.erf((t.yq[:, None] - mu) / (sig * math.sqrt(2))))
+    if probs:
+        return lp, cdf, CO.gauss_bucket_probs(mu, sig.expand_as(mu)).mean(1)
     return lp, cdf
 
 
@@ -173,7 +176,8 @@ def predictive(model: Model, th: torch.Tensor, g: torch.Generator):
 def oracle(t: C.CisTasks, spec: FT.Spec, K: int = 2048, seed: int = 0, pi_id: float = C.PI_ID, chunk: int = 32,
            full: bool = False) -> dict:  # fmt: skip
     """-> {"lp": log predictive density at y* [P, Q], "cdf": [P, Q], "pJ": p(J | A) [P, nJ], "logz": [P, nJ],
-    "mc": MC error per task (|half 1 − half 2| mean over queries) [P]} (+ "probs" [P, Q, G] if full)."""
+    "mc": MC error per task (|half 1 − half 2| mean over queries) [P]}
+    (+ "probs" [P, Q, G] if full: the bucket probabilities of the predictive, h included)."""
     P = t.xa.shape[0]
     halves = []
     for h in range(2):
@@ -185,13 +189,14 @@ def oracle(t: C.CisTasks, spec: FT.Spec, K: int = 2048, seed: int = 0, pi_id: fl
                 sub = t.sub(torch.arange(s, min(s + chunk, P), device=t.xa.device))
                 mdl = Model(sub, J, spec, pi_id)
                 th, lz, _ = smc(mdl, K // 2, g)
-                lp, cdf = predictive(mdl, th, g)
+                if full:
+                    lp, cdf, pr = predictive(mdl, th, g, probs=True)
+                    pr_J.append(pr)
+                else:
+                    lp, cdf = predictive(mdl, th, g)
                 lp_J.append(torch.logsumexp(lp, 1) - math.log(K // 2))
                 cdf_J.append(cdf.mean(1))
                 lz_J.append(lz)
-                if full:
-                    a_b = _probs(mdl, th, g)
-                    pr_J.append(a_b)
             lps.append(torch.cat(lp_J))
             cdfs.append(torch.cat(cdf_J))
             lzs.append(torch.cat(lz_J))
@@ -217,9 +222,3 @@ def oracle(t: C.CisTasks, spec: FT.Spec, K: int = 2048, seed: int = 0, pi_id: fl
     if full:
         out["probs"] = 0.5 * (h1["probs"] + h2["probs"])
     return out
-
-
-def _probs(mdl: Model, th: torch.Tensor, g: torch.Generator) -> torch.Tensor:
-    """Bucket probabilities of the particle mixture at the queries [P, Q, G] (h = id toys only)."""
-    m_q = mdl.m(th, mdl.t.xq)
-    return CO.gauss_bucket_probs(m_q, mdl.t.sig_a[:, None, None].expand_as(m_q)).mean(1)
